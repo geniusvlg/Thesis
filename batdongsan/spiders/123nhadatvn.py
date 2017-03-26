@@ -24,8 +24,13 @@ class Nhadat123Spider(scrapy.Spider):
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
 	def convert_unicode(self,text):
-		return unicodedata.normalize('NFKD', text).encode('ascii','ignore')
-
+		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.replace('\n','')
+		text=text.replace('\t','')
+		text=text.replace('\r','')
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
+		return text
 	def convert_time(self,text,item):
 		post_time=None
 		if re.search("/",text):

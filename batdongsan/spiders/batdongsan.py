@@ -42,6 +42,8 @@ class Nhadat24hSpider(scrapy.Spider):
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		return text
 	def parse(self,response):
 		response=HtmlResponse(url=response.url,body=response.body)

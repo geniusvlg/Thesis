@@ -13,7 +13,13 @@ class Nhadat24hSpider(scrapy.Spider):
 		"http://nhadat24h.net/cho-thue-bat-dong-san-tp-hcm-nha-dat-tp-hcm-s295819/"
 	]
 	def convert_unicode(self,text):
-		return unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.replace('\n','')
+		text=text.replace('\t','')
+		text=text.replace('\r','')
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
+		return text
 
 	def convert_time(self,text):
 		post_date = None

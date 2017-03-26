@@ -22,7 +22,13 @@ class NhadatVnSpider(scrapy.Spider):
 	
 
 	def convert_unicode(self,text):
-		return unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.replace('\n','')
+		text=text.replace('\t','')
+		text=text.replace('\r','')
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
+		return text
 
 	def convert_price(self,text):
 		if(bool(re.search(r'\d',text))==False):
