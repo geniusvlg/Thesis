@@ -9,13 +9,13 @@ from scrapy.selector import Selector
 class NhadatVnSpider(scrapy.Spider):
 	name = "Nhadatvn"
 	last_post_time=''
-	is_last=''
+	is_last_sell=''
+	is_last_rent=''
 	is_updated=''
 	def start_requests(self):
-		global is_last
-		global is_updated
-		is_last=False
-		is_updated=False
+		self.is_last_rent=False
+		self.is_last_sell=False
+		self.is_updated=False
 		urls = [
 		'https://raovat.nhadat.vn/cho-thue-4/?prefixid=0&prefixid2=0&direction=0&price=0',
 		'https://raovat.nhadat.vn/can-ban-12/?prefixid=0&prefixid2=0&direction=0&price=0'
@@ -82,14 +82,16 @@ class NhadatVnSpider(scrapy.Spider):
 			date=datetime.datetime.now() - datetime.timedelta(1)
 		else:
 			date=datetime.datetime.strptime(date,"%d-%m-%Y")
-		global is_last
-		global is_first
 		weekday=date.weekday()
 		if date<last_post_time:
 			print(date.strftime("%d-%m-%Y"),last_post_time.strftime("%d-%m-%Y"),response.url)
+			if transaction_type=='Cho Thue':
+				self.is_last_rent=True
 
-			is_last=True
+			else:
+				self.is_last_sell=True
 			return
+
 		county = self.convert_unicode(property_info[1])
 		province = self.convert_unicode(property_info[0])
 		if re.search("HCM",province)!=None:
@@ -130,31 +132,32 @@ class NhadatVnSpider(scrapy.Spider):
 
 	def parse(self, response):
 		#get all item 
-		items=response.xpath("//li[contains(@class,'threadbit')]")
-		global is_updated
+		items=response.xpath("//li[contains(@class,'threadbit') and not(contains(@class,'hot'))]")
 		print(response.url)
-		if response.url.find('index')==-1 and is_updated==False: #first page
-			is_updated=True
-			global last_post_time
+		if response.url.find('index')==-1 and self.is_updated==False: #first page
+			self.is_updated=True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				if "Nhadatvn" in data:
 					last_post_time=datetime.datetime.strptime(data["Nhadatvn"],"%d-%m-%Y %H:%M")
-					data["Nhadatvn"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+					data["Nhadatvn"]=(datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
-
+		
 		for item in items:
-			if is_last==True:
-				break
+			if(re.search('cho-thue',response.url)!=None):
+				if self.is_last_rent==True:
+					return
+			else:
+				if self.is_last_sell==True:
+					return
 			item_id = item.xpath(".//a[contains(@class,'title')]/@id").extract_first().split('_')[2]
 			item_url = item.xpath(".//h2[contains(@class,'threadtitle')]/a/@href").extract_first()
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
 		#if there is no expired item, go to next page, if there is a next page
-		if is_last==False:
-			next_href=response.xpath("//a[contains(@rel,'next')]/@href")
-			next_href_address=response.xpath("//a[contains(@rel,'next')]/@href").extract_first()
-			if next_href!=[]:
-				yield scrapy.Request(next_href_address,callback=self.parse)
+		next_href=response.xpath("//a[contains(@rel,'next')]/@href")
+		next_href_address=response.xpath("//a[contains(@rel,'next')]/@href").extract_first()
+		if next_href!=[]:
+			yield scrapy.Request(next_href_address,callback=self.parse)

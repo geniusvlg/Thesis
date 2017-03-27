@@ -10,10 +10,9 @@ from scrapy.http import HtmlResponse
 class Nhadat24hSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
-	is_updated=''
+	is_updated=False
 	def start_requests(self):
-		global is_updated
-		is_updated=False
+		self.is_updated=False
 		urls = [
 			"http://batdongsan.com.vn/nha-dat-cho-thue",
 			"http://batdongsan.com.vn/nha-dat-ban"
@@ -56,15 +55,13 @@ class Nhadat24hSpider(scrapy.Spider):
 		already_crawl=False
 
 		url_length=len(response.url.split('/'))
-		global is_updated
-		if url_length==4 and is_updated==False: #first page
-			is_updated=True
-			global last_post_time
+		if url_length==4 and self.is_updated==False: #first page
+			self.is_updated=True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
-				last_post_time=''
+				self.last_post_time=''
 				if "batdongsan" in data:
-					last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
+					self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
 				data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
@@ -78,7 +75,7 @@ class Nhadat24hSpider(scrapy.Spider):
 			url=item.xpath("./div[@class='p-title']/h3/a/@href").extract_first()
 			date_text=self.convert_unicode(item.xpath("./div[@class='p-main']/div[contains(@class,'p-bottom-crop')]/div[contains(@class,'floatright')]/text()").extract_first())
 			post_date=datetime.datetime.strptime(date_text,"%d/%m/%Y")
-			if post_date<last_post_time:
+			if post_date<self.last_post_time:
 				already_crawl=True
 			yield scrapy.Request(url=("http://batdongsan.com.vn"+url),callback=self.parseitem)
 

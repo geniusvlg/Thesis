@@ -12,8 +12,7 @@ class Nhadat123Spider(scrapy.Spider):
 	cur_page_index=2
 	is_updated=''
 	def start_requests(self):
-		global is_updated
-		is_updated=False
+		self.is_updated=False
 		urls = [
 			"http://123nhadat.vn/raovat-c2/nha-dat-cho-thue",
 			"http://123nhadat.vn/raovat-c1/nha-dat-ban"
@@ -137,20 +136,15 @@ class Nhadat123Spider(scrapy.Spider):
 		is_last= False
 		print(response.url)
 
-		items=response.xpath(".//div[@class='box_nhadatban ']")
-		global cur_page_index
-		global is_updated
-		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and is_updated==False:
-			is_updated=True
-			global last_post_time
-			cur_page_index=1
+		items=response.xpath(".//div[contains(@class,'box_nhadatban') and not(contains(@class,'box_R'))]")
+		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and self.is_updated==False:
+			self.is_updated=True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
-
-				last_post_time=''
+				self.last_post_time=''
 				if "123nhadat" in data:
-					last_post_time=datetime.datetime.strptime(data["123nhadat"],"%d-%m-%Y %H:%M")
-				data["123nhadat"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+					self.last_post_time=datetime.datetime.strptime(data["123nhadat"],"%d-%m-%Y %H:%M")
+				data["123nhadat"]=(datetime.datetime.now()-datetime.timedelta(minutes=5)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
@@ -158,9 +152,11 @@ class Nhadat123Spider(scrapy.Spider):
 			post_id=self.convert_unicode(item.xpath("./div/div/span/text()").extract_first().split(' ')[1])
 			post_time_text=self.convert_unicode(item.xpath("./div/div/div/ul/li/span/span/text()").extract_first())
 			post_time=self.convert_time(post_time_text,item)
-			if post_time<=last_post_time:
-				is_last=True
-				break
+
+			if re.search('vip',item.xpath("./@class").extract_first())==None:
+				if post_time<=self.last_post_time:
+					is_last=True
+					break
 			item_url=self.convert_unicode(item.xpath("./div/h4/a/@href").extract_first())
 			yield scrapy.Request(item_url,callback=self.parse_item)
 

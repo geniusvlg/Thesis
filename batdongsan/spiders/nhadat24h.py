@@ -16,8 +16,7 @@ class Nhadat24hSpider(scrapy.Spider):
 	]
 
 	def start_requests(self):
-		global is_updated
-		is_updated=False
+		self.is_updated=False
 		urls=[
 			"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
 			"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
@@ -97,16 +96,14 @@ class Nhadat24hSpider(scrapy.Spider):
 	def parse(self, response):
 		is_last= False
 		is_old=False
-		global is_updated
 		items = response.xpath(".//div[contains(@class,'dv-item')]")
-		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and is_updated==False: #first page
-			is_updated=True
-			global last_post_time
+		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and self.is_updated==False: #first page
+			self.is_updated=True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
-				last_post_time=''
+				self.last_post_time=''
 				if "nhadat24h" in data:
-					last_post_time=datetime.datetime.strptime(data["nhadat24h"],"%d-%m-%Y %H:%M")
+					self.last_post_time=datetime.datetime.strptime(data["nhadat24h"],"%d-%m-%Y %H:%M")
 				data["nhadat24h"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
@@ -120,12 +117,13 @@ class Nhadat24hSpider(scrapy.Spider):
 
 			post_time = self.convert_unicode(item.xpath(".//p")[0].xpath(".//text()").extract_first())
 			post_date=self.convert_time(post_time)
-			if post_date<last_post_time:
-				is_last=True
-				break
-			if post_date.year<2012:
-				is_old=True
-				break
+			if re.search("vip",item.xpath("./@class").extract_first())==None:
+				if post_date<self.last_post_time:
+					is_last=True
+					break
+				if post_date.year<2012:
+					is_old=True
+					break
 			yield scrapy.Request("http://nhadat24h.net" + post_url,callback= self.parse_item)
 
 		next_url=response.xpath(".//a[contains(@title,'Trang sau')]/@href").extract_first()
