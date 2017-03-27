@@ -10,12 +10,13 @@ from scrapy.http import HtmlResponse
 class Nhadat24hSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
-	index=None
+	is_updated=''
 	def start_requests(self):
-		global index
-		index=1
+		global is_updated
+		is_updated=False
 		urls = [
-			"http://batdongsan.com.vn/nha-dat-cho-thue"
+			"http://batdongsan.com.vn/nha-dat-cho-thue",
+			"http://batdongsan.com.vn/nha-dat-ban"
 		]
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
@@ -26,9 +27,11 @@ class Nhadat24hSpider(scrapy.Spider):
 			#get the base number, and the unit (Ngan, Trieu, Ty)
 			price_s=text.split(' ')
 			real_price=0
-
-			base=float(price_s[0].replace(',','.'))
-			unit=price_s[1]
+			i=0
+			while(price_s[i]==''):
+				i+=1
+			base=float(re.sub('\D','.',price_s[i]))
+			unit=price_s[i+1]
 			if unit[0]=='N' or unit[0]=='n':
 				real_price+=(base)*1000
 			elif unit[0]=='T' or unit[0]=='t':
@@ -38,18 +41,24 @@ class Nhadat24hSpider(scrapy.Spider):
 					real_price+=(base)*1000000000
 			return real_price
 	def convert_unicode(self,text):
+		if text=='':
+			return text
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
 		return text
 	def parse(self,response):
+		print(response.url)
 		response=HtmlResponse(url=response.url,body=response.body)
 		already_crawl=False
-		global index
-		if index==1: #first page
+
+		url_length=len(response.url.split('/'))
+		global is_updated
+		if url_length==4 and is_updated==False: #first page
+			is_updated=True
 			global last_post_time
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
@@ -74,15 +83,16 @@ class Nhadat24hSpider(scrapy.Spider):
 			yield scrapy.Request(url=("http://batdongsan.com.vn"+url),callback=self.parseitem)
 
 		if is_last_page==False and already_crawl==False:
-			
 			next_page_url=response.url.split("/")
-			if index!=1:
+			index=''
+			if url_length==5:
+				index=int(next_page_url[-1][1:])+1
 				del next_page_url[-1]
-			index+=1
+			else:
+				index=2
 			page="p%d"%index
 			next_page_url.append(page)
 			next_page_url="/".join(next_page_url)
-			print(next_page_url)
 			yield scrapy.Request(url=next_page_url,callback=self.parse)
 
 	def parseitem(self,response):
@@ -90,10 +100,13 @@ class Nhadat24hSpider(scrapy.Spider):
 
 		post_detail=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[0]
 		post_detail_boxes=post_detail.xpath('./div/div[@class="left-detail"]/div')
-		post_id=self.convert_unicode(post_detail_boxes[2].xpath("./div[@class='right']/text()").extract_first())
+		i=1
+		if post_detail_boxes[0].xpath('./@id').extract_first()=="LeftMainContent__productDetail_project":
+			i=0
+		post_id=self.convert_unicode(post_detail_boxes[2-i].xpath("./div[@class='right']/text()").extract_first())
 
-		location_detail=self.convert_unicode(post_detail_boxes[1].xpath("./div[@class='right']/text()").extract_first())
-		post_date=self.convert_unicode(post_detail_boxes[4].xpath("./div[@class='right']/text()").extract_first())
+		location_detail=self.convert_unicode(post_detail_boxes[1-i].xpath("./div[@class='right']/text()").extract_first())
+		post_date=self.convert_unicode(post_detail_boxes[4-i].xpath("./div[@class='right']/text()").extract_first())
 		post_date=post_date.replace(' ','')
 		post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y")
 		author_box=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[1]
@@ -117,7 +130,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		housetype=""
 		transaction_type=""
 		house_type_text=self.convert_unicode(response.xpath("//span[contains(@class,'diadiem-title')]/a/text()").extract_first())
-		if re.search("Cho thue",house_type_text)!=False:
+		if re.search("Cho thue",house_type_text)!=None:
 			transaction_type='Cho thue'
 			housetype=house_type_text[9:]
 		else:

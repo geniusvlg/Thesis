@@ -10,27 +10,49 @@ class Nhadat123Spider(scrapy.Spider):
 	name="123nhadat"
 	last_post_time=''
 	cur_page_index=2
-	start_urls=[
-		"http://123nhadat.vn/raovat-c2/nha-dat-cho-thue",
-		"http://123nhadat.vn/raovat-c1/nha-dat-ban"
-	]
+	is_updated=''
 	def start_requests(self):
-		global is_last
-		is_last=False
+		global is_updated
+		is_updated=False
 		urls = [
-		'https://raovat.nhadat.vn/cho-thue-4/?prefixid=0&prefixid2=0&direction=0&price=0',
-		'https://raovat.nhadat.vn/can-ban-12/?prefixid=0&prefixid2=0&direction=0&price=0'
+			"http://123nhadat.vn/raovat-c2/nha-dat-cho-thue",
+			"http://123nhadat.vn/raovat-c1/nha-dat-ban"
 		]
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
+
 	def convert_unicode(self,text):
+		if text=='':
+			return text
+		elif text==None:
+			return ''
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
 		return text
+	def convert_price(self,text):
+		if(bool(re.search(r'\d',text))==False):
+			return text
+		else :
+			#get the base number, and the unit (Ngan, Trieu, Ty)
+			price_s=text.split(' ')
+			real_price=0
+			i=0
+			while(price_s[i]==''):
+				i+=1
+			base=float(re.sub('\D','.',price_s[i]))
+			unit=price_s[i+1]
+			if unit[0]=='N' or unit[0]=='n':
+				real_price+=(base)*1000
+			elif unit[0]=='T' or unit[0]=='t':
+				if unit[1]=='r':
+					real_price+=(base)*1000000
+				else:
+					real_price+=(base)*1000000000
+			return real_price
 	def convert_time(self,text,item):
 		post_time=None
 		if re.search("/",text):
@@ -56,7 +78,7 @@ class Nhadat123Spider(scrapy.Spider):
 		if(re.search("Cho thue",url_title)!= None):
 			house_type=url_title[url_title.find("Cho thue")+9:url_title.find("tai")-1]
 			transaction_type="Cho thue"
-		elif re.search("Ban",url_title!= None):
+		elif re.search("Ban",url_title)!= None:
 			house_type=url_title[url_title.find("Ban")+4:url_title.find("tai")-1]
 			transaction_type="Can ban"
 
@@ -88,18 +110,14 @@ class Nhadat123Spider(scrapy.Spider):
 		area= self.convert_unicode(info_no_1[1].xpath("./b/text()").extract_first())
 		raw_price= self.convert_unicode(info_no_1[0].xpath("./b/text()").extract_first())
 		price=raw_price
-		if raw_price.split(" ")[0].isdigit():
-			base=float(raw_price.split(" ")[0])
-			unit=raw_price.split(" ")[1]
-			multiply=1
-			if unit[0]=="T":
-				if unit[1]=='r':
-					multiply=1000000
-				elif unit[1]=='y':
-					multiply=1000000000
-			elif unit[0]=='N':
-				multiply=1000
-			price=str(int(base*multiply))
+		if raw_price==None:
+			price="Thoa thuan"
+		else:
+			if raw_price.split(" ")[0].isdigit():
+				price=self.convert_price(raw_price)
+			else:
+				price=raw_price
+
 
 		yield {
 			'post-id': post_id,
@@ -117,9 +135,13 @@ class Nhadat123Spider(scrapy.Spider):
 
 	def parse(self,response):
 		is_last= False
+		print(response.url)
+
 		items=response.xpath(".//div[@class='box_nhadatban ']")
 		global cur_page_index
-		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False:
+		global is_updated
+		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and is_updated==False:
+			is_updated=True
 			global last_post_time
 			cur_page_index=1
 			with open('last_post_id.json','r+') as f:
@@ -149,10 +171,16 @@ class Nhadat123Spider(scrapy.Spider):
 		if paging[len(paging)-1]!='Sau':
 			is_last_page=True
 		if is_last == False and is_last_page== False:
+			next_url=response.url.split('/')
+			if len(response.url.split('/'))==5:
+				index=2
+				next_url.append(str(index)+'/-1/0/0')
+			else:
+				index=response.url.split('/')[5]
+				next_url[5]=str(int(index)+1)
 			
-			cur_page_index+=1
-			yield scrapy.Request("http://123nhadat.vn/raovat-c2/nha-dat-cho-thue-tai-tp-hcm-3/" + str(cur_page_index)+"/-1/0/0", callback= self.parse)
-		
+			next_url="/".join(next_url)
+			yield scrapy.Request(next_url, callback= self.parse)
 
 	def __repr__(self):
 		"""only print out attr1 after exiting the Pipeline"""

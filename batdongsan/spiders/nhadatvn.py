@@ -10,9 +10,12 @@ class NhadatVnSpider(scrapy.Spider):
 	name = "Nhadatvn"
 	last_post_time=''
 	is_last=''
+	is_updated=''
 	def start_requests(self):
 		global is_last
+		global is_updated
 		is_last=False
+		is_updated=False
 		urls = [
 		'https://raovat.nhadat.vn/cho-thue-4/?prefixid=0&prefixid2=0&direction=0&price=0',
 		'https://raovat.nhadat.vn/can-ban-12/?prefixid=0&prefixid2=0&direction=0&price=0'
@@ -22,12 +25,14 @@ class NhadatVnSpider(scrapy.Spider):
 	
 
 	def convert_unicode(self,text):
+		if text=='':
+			return text
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
 		return text
 
 	def convert_price(self,text):
@@ -37,12 +42,14 @@ class NhadatVnSpider(scrapy.Spider):
 			#get the base number, and the unit (Ngan, Trieu, Ty)
 			price_s=text.split(' ')
 			real_price=0
-
-			base=float(price_s[0].replace(',','.'))
-			unit=price_s[1]
-			if unit[0]=='N':
+			i=0
+			while(price_s[i]==''):
+				i+=1
+			base=float(re.sub('\D','.',price_s[i]))
+			unit=price_s[i+1]
+			if unit[0]=='N' or unit[0]=='n':
 				real_price+=(base)*1000
-			elif unit[0]=='T':
+			elif unit[0]=='T' or unit[0]=='t':
 				if unit[1]=='r':
 					real_price+=(base)*1000000
 				else:
@@ -79,8 +86,10 @@ class NhadatVnSpider(scrapy.Spider):
 		global is_first
 		weekday=date.weekday()
 		if date<last_post_time:
-			print(date,last_post_time)
+			print(date.strftime("%d-%m-%Y"),last_post_time.strftime("%d-%m-%Y"),response.url)
+
 			is_last=True
+			return
 		county = self.convert_unicode(property_info[1])
 		province = self.convert_unicode(property_info[0])
 		if re.search("HCM",province)!=None:
@@ -122,8 +131,10 @@ class NhadatVnSpider(scrapy.Spider):
 	def parse(self, response):
 		#get all item 
 		items=response.xpath("//li[contains(@class,'threadbit')]")
-
-		if response.url.find('index')==-1: #first page
+		global is_updated
+		print(response.url)
+		if response.url.find('index')==-1 and is_updated==False: #first page
+			is_updated=True
 			global last_post_time
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)

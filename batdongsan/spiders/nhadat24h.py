@@ -9,16 +9,31 @@ from scrapy.selector import Selector
 class Nhadat24hSpider(scrapy.Spider):
 	name="nhadat24h"
 	last_post_time=''
+	is_updated=''
 	start_urls=[
-		"http://nhadat24h.net/cho-thue-bat-dong-san-tp-hcm-nha-dat-tp-hcm-s295819/"
+		"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
+		"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
 	]
+
+	def start_requests(self):
+		global is_updated
+		is_updated=False
+		urls=[
+			"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
+			"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
+		]
+		for url in urls:
+			yield scrapy.Request(url=url,callback=self.parse)
+
 	def convert_unicode(self,text):
+		if text=='':
+			return text
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
 		return text
 
 	def convert_time(self,text):
@@ -30,7 +45,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		return post_date
 
 	def parse_item(self,response):
-		title = self.convert_unicode(response.xpath(".//div[contains(@class,'dv-ct-detail')]/h1/text()").extract_first())
+		title = self.convert_unicode(response.xpath(".//div[contains(@class,'dv-ct-detail')]/h1/a/text()").extract_first())
 		post_id = response.url.split("-")[len(response.url.split("-"))-1]
 		property_details = response.xpath(".//div[contains(@class,'dv-tb-tsbds')]/table/tbody/tr")
 		area = self.convert_unicode(property_details[1].xpath(".//td/label/strong/text()").extract_first())
@@ -82,9 +97,10 @@ class Nhadat24hSpider(scrapy.Spider):
 	def parse(self, response):
 		is_last= False
 		is_old=False
-
+		global is_updated
 		items = response.xpath(".//div[contains(@class,'dv-item')]")
-		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False: #first page
+		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and is_updated==False: #first page
+			is_updated=True
 			global last_post_time
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
