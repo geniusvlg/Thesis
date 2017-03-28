@@ -83,8 +83,8 @@ class NhadatVnSpider(scrapy.Spider):
 		else:
 			date=datetime.datetime.strptime(date,"%d-%m-%Y")
 		weekday=date.weekday()
-		if date<last_post_time:
-			print(date.strftime("%d-%m-%Y"),last_post_time.strftime("%d-%m-%Y"),response.url)
+		if date<self.last_post_time:
+			print(date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
 			if transaction_type=='Cho Thue':
 				self.is_last_rent=True
 
@@ -139,7 +139,7 @@ class NhadatVnSpider(scrapy.Spider):
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				if "Nhadatvn" in data:
-					last_post_time=datetime.datetime.strptime(data["Nhadatvn"],"%d-%m-%Y %H:%M")
+					self.last_post_time=datetime.datetime.strptime(data["Nhadatvn"],"%d-%m-%Y %H:%M")
 					data["Nhadatvn"]=(datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
