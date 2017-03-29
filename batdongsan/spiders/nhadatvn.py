@@ -95,7 +95,7 @@ class NhadatVnSpider(scrapy.Spider):
 		county = self.convert_unicode(property_info[1])
 		province = self.convert_unicode(property_info[0])
 		if re.search("HCM",province)!=None:
-			provice="HCM"
+			province="HCM"
 		area=""
 		price=None
 		if len(property_info)>3:
@@ -131,9 +131,10 @@ class NhadatVnSpider(scrapy.Spider):
 		}
 
 	def parse(self, response):
-		#get all item 
+		# Get all item 
 		items=response.xpath("//li[contains(@class,'threadbit') and not(contains(@class,'hot'))]")
 		print(response.url)
+		# We use is_updated here because we want the first page to be run only one time for both 2 links
 		if response.url.find('index')==-1 and self.is_updated==False: #first page
 			self.is_updated=True
 			with open('last_post_id.json','r+') as f:
@@ -141,6 +142,7 @@ class NhadatVnSpider(scrapy.Spider):
 				if "Nhadatvn" in data:
 					self.last_post_time=datetime.datetime.strptime(data["Nhadatvn"],"%d-%m-%Y %H:%M")
 					data["Nhadatvn"]=(datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
+			
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
