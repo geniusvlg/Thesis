@@ -7,7 +7,7 @@ import os
 from scrapy.selector import Selector
 
 class AlonhadatSpider(scrapy.Spider):
-	name = 'Alonhadatvn'
+	name = 'alonhadat.com.vn'
 	area = ''
 	last_post_time = ''
 	is_last_sell = ''
@@ -15,12 +15,12 @@ class AlonhadatSpider(scrapy.Spider):
 	is_updated = ''
 	next_url = ''
 	def start_requests(self):
-		self.next_url = 'http://alonhadat.com.vn/nha-dat/cho-thue/trang--'
 		self.is_updated = False
 		self.is_last_sell = False
 		self.is_last_rent = False
 		urls = [
-		'http://alonhadat.com.vn/nha-dat/can-ban.html'
+		'http://alonhadat.com.vn/nha-dat/can-ban.html',
+		'http://alonhadat.com.vn/nha-dat/cho-thue.html'
 		]
 
 		for url in urls:
@@ -38,7 +38,6 @@ class AlonhadatSpider(scrapy.Spider):
 		return text
 
 	def convert_price(self, price):
-
 		list_price = price.split()
 		if price.find('/') != -1:
 			real_price = int(list_price[0]) * 1000000 * int(self.area)
@@ -53,13 +52,16 @@ class AlonhadatSpider(scrapy.Spider):
 	def parse(self, response):
 		# Get all items
 		items = response.xpath("//div[contains(@class, 'content-item')]")
+		self.next_url = response.url.rpartition("--")[0] + '--'
 		if response.url.find('trang') == -1 and self.is_updated == False: # Process the first page
+			self.next_url = response.url.replace(".html","/trang--")
 			self.is_updated = True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
-				if "Alonhadatvn" in data:
-					self.last_post_time = datetime.datetime.strptime(data["Alonhadatvn"],"%d-%m-%Y %H:%M")
-					data["Alonhadatvn"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
+				if "alonhadat.com.vn" in data:
+					self.last_post_time = datetime.datetime.strptime(data["alonhadat.com.vn"],"%d-%m-%Y %H:%M")
+					data["alonhadat.com.vn"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
+			
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
@@ -77,6 +79,7 @@ class AlonhadatSpider(scrapy.Spider):
 
 
 		# Go to next page
+		print("Next url: " + self.next_url)
 		next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract()
 		if len(next_pages == 1):	# Ony one 'nofollow'
 			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract_first()
@@ -112,13 +115,13 @@ class AlonhadatSpider(scrapy.Spider):
 
 		# Get post time
 		post_date = response.xpath("//span[@class='date']/text()").extract_first()
-		post_date = self.convert_unicode(post_date).replace('Ngay dang: ', '')
+		post_date = self.convert_unicode(post_date).replace('Ngay dang: ', '').replace("/","-")
 		if post_date =="Hom nay":
 			post_date=datetime.datetime.now()
 		elif post_date == "Hom qua":
 			post_date=datetime.datetime.now() - datetime.timedelta(1)
 		else:
-			post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y")
+			post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y") #
 		weekday = post_date.weekday()
 		if post_date<self.last_post_time:
 			print(post_date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)

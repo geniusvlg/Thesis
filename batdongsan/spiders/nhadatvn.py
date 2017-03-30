@@ -81,7 +81,8 @@ class NhadatVnSpider(scrapy.Spider):
 		elif date == "Hom qua":
 			date=datetime.datetime.now() - datetime.timedelta(1)
 		else:
-			date=datetime.datetime.strptime(date,"%d-%m-%Y")
+			date=datetime.datetime.strptime(date,"%d-%m-%Y")	# datetime.datetime(2017, 2, 21, 0, 0)
+
 		weekday=date.weekday()
 		if date<self.last_post_time:
 			print(date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
