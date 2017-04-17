@@ -8,6 +8,7 @@ from scrapy.selector import Selector
 
 class NhadatVnSpider(scrapy.Spider):
 	name = "Nhadatvn"
+	download_delay=0.5
 	last_post_time=''
 	is_last_sell=''
 	is_last_rent=''

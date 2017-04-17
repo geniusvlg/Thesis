@@ -7,11 +7,14 @@ import os
 from scrapy.selector import Selector
 from scrapy.http import HtmlResponse
 
+
 class Nhadat24hSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
 	is_updated=False
+	baseUrl=''
 	def start_requests(self):
+		self.baseUrl="http://batdongsan.com.vn"
 		self.is_updated=False
 		urls = [
 			"http://batdongsan.com.vn/nha-dat-cho-thue",
@@ -49,8 +52,31 @@ class Nhadat24hSpider(scrapy.Spider):
 		text=text.replace('\t','')
 		text=text.replace('\r','')
 		return text
+
 	def parse(self,response):
-		print(response.url)
+		response=HtmlResponse(url=response.url,body=response.body)
+		zones=response.xpath("//div[@id='divCountByAreas']")[0]
+		zones_href=zones.xpath('./ul/li/h3/a/@href').extract()
+		texts_zone=response.xpath("//div[@id='divCountByAreas']")[0]
+		texts=texts_zone.xpath("./ul/li/h3/a/text()").extract()
+		for index,href in enumerate(zones_href):
+			yield scrapy.Request(url=self.baseUrl+href,meta={'province':texts[index]},callback=self.parse_province)
+
+	def parse_province(self,response):
+		meta=response.meta
+
+		response=HtmlResponse(url=response.url,body=response.body)
+		zones=response.xpath("//div[@id='divCountByAreas']")[0]
+		zones_href=zones.xpath('./ul/li/h3/a/@href').extract()
+		texts_zone=response.xpath("//div[@id='divCountByAreas']")[0]
+		texts=texts_zone.xpath("./ul/li/h3/a/text()").extract()
+		for index,href in enumerate(zones_href):
+			print(self.convert_unicode(meta['province']),self.convert_unicode(texts[index]))
+			yield scrapy.Request(url=self.baseUrl+href,meta={'county':texts[index],'province':meta['province']},callback=self.parse_list)
+
+	def parse_list(self,response):
+		meta=response.meta
+		
 		response=HtmlResponse(url=response.url,body=response.body)
 		already_crawl=False
 
@@ -60,15 +86,19 @@ class Nhadat24hSpider(scrapy.Spider):
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				self.last_post_time=''
-				if "batdongsan" in data:
-					self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
-				data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+				self.last_post_time=datetime.datetime.strptime('01-01-2012 00:00',"%d-%m-%Y %H:%M")
+				#if "batdongsan" in data:
+					#self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
+				#data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
 		pager=response.xpath("//div[@class='background-pager-controls']/div/a/div/text()").extract()
 		is_last_page=False
-		if pager[len(pager)-1].isdigit()==True:
+		if pager!=[]:
+			if pager[len(pager)-1].isdigit()==True:
+				is_last_page=True
+		else:
 			is_last_page=True
 		items=response.xpath("//div[contains(@class,'search-productItem')]")
 		for item in items:
@@ -77,9 +107,11 @@ class Nhadat24hSpider(scrapy.Spider):
 			post_date=datetime.datetime.strptime(date_text,"%d/%m/%Y")
 			if post_date<self.last_post_time:
 				already_crawl=True
-			yield scrapy.Request(url=("http://batdongsan.com.vn"+url),callback=self.parseitem)
-
+			if len(url)>0:
+				yield scrapy.Request(url=(self.baseUrl+url),meta={'province':meta['province'],'county':meta['county']},callback=self.parseitem)
+		print(response.url,already_crawl,is_last_page);
 		if is_last_page==False and already_crawl==False:
+
 			next_page_url=response.url.split("/")
 			index=''
 			if url_length==5:
@@ -90,9 +122,10 @@ class Nhadat24hSpider(scrapy.Spider):
 			page="p%d"%index
 			next_page_url.append(page)
 			next_page_url="/".join(next_page_url)
-			yield scrapy.Request(url=next_page_url,callback=self.parse)
+			yield scrapy.Request(url=next_page_url,meta={'province':meta['province'],'county':meta['county']},callback=self.parse_list)
 
 	def parseitem(self,response):
+		meta=response.meta
 		response=HtmlResponse(url=response.url,body=response.body)
 
 		post_detail=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[0]
@@ -110,13 +143,10 @@ class Nhadat24hSpider(scrapy.Spider):
 		author_detail=author_box.xpath("./div/div")
 		author=self.convert_unicode(author_detail[1].xpath("./div[@class='right']/text()").extract_first())
 		location=response.xpath("//span[contains(@class,'diadiem-title')]/text()").extract()[2].split(' - ')
-		county=""
-		province=""
-		if len(location)==3:
-			county=self.convert_unicode(location[1])
-			province=self.convert_unicode(location[2])
-		else:
-			province=self.convert_unicode(location[1])
+
+		county=self.convert_unicode(meta['county'])
+		province=self.convert_unicode(meta['province'])
+
 		title=self.convert_unicode(response.xpath("//div[@class='pm-title']/h1/text()").extract_first())
 		area_price_text=response.xpath("//span[contains(@class,'gia-title')]/strong/text()").extract()
 		area=self.convert_unicode(area_price_text[1])
