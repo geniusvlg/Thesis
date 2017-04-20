@@ -157,12 +157,13 @@ class Nhadat24hSpider(scrapy.Spider):
 		housetype=""
 		transaction_type=""
 		house_type_text=self.convert_unicode(response.xpath("//span[contains(@class,'diadiem-title')]/a/text()").extract_first())
+		lastpos=house_type_text.find('tai')-1
 		if re.search("Cho thue",house_type_text)!=None:
 			transaction_type='Cho thue'
-			housetype=house_type_text[9:]
+			housetype=house_type_text[9:lastpos]
 		else:
 			transaction_type='Can ban'
-			housetype=house_type_text[4:]
+			housetype=house_type_text[4:lastpos]
 
 		description=self.convert_unicode(" ".join(response.xpath("//div[contains(@class,'pm-desc')]//text()").extract()))
 
