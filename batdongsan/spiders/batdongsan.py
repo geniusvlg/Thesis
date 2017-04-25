@@ -10,6 +10,7 @@ from scrapy.http import HtmlResponse
 
 class Nhadat24hSpider(scrapy.Spider):
 	name="batdongsan"
+	download_delay=10
 	last_post_time=""
 	is_updated=False
 	baseUrl=''
@@ -45,9 +46,10 @@ class Nhadat24hSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.decode()
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
@@ -87,9 +89,9 @@ class Nhadat24hSpider(scrapy.Spider):
 				data=json.load(f)
 				self.last_post_time=''
 				self.last_post_time=datetime.datetime.strptime('01-01-2012 00:00',"%d-%m-%Y %H:%M")
-				#if "batdongsan" in data:
-					#self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
-				#data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+				if "batdongsan" in data:
+					self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
+				data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
