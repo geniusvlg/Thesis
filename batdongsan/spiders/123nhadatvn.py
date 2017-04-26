@@ -120,7 +120,7 @@ class Nhadat123Spider(scrapy.Spider):
 
 		yield {
 			'post-id': post_id,
-			'website': "123nhadata.vn",
+			'website': "123nhadat.vn",
 			'author': author,
 			'post-time': {'date': last_update_time.strftime("%d-%m-%Y"),'weekday': last_update_time.weekday()},
 			'title': title,
