@@ -10,7 +10,6 @@ from scrapy.http import HtmlResponse
 
 class Nhadat24hSpider(scrapy.Spider):
 	name="batdongsan"
-	download_delay=10
 	last_post_time=""
 	is_updated=False
 	baseUrl=''

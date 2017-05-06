@@ -18,7 +18,7 @@ LOG_LEVEL = 'DEBUG'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'batdongsan (+http://www.yourdomain.com)'
-
+USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:39.0) Gecko/20100101 Firefox/39.0"
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
@@ -53,9 +53,13 @@ ROBOTSTXT_OBEY = True
 
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'batdongsan.middlewares.MyCustomDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+   # 'batdongsan.middlewares.MyCustomDownloaderMiddleware': 543,
+   'scrapy.contrib.downloadermiddleware.useragent.UserAgentMiddleware': None,
+   'random_useragent.RandomUserAgentMiddleware': 400
+}
+USER_AGENT_LIST='agents.txt'
+AUTOTHROTTLE_ENABLED=True
 
 # Enable or disable extensions
 # See http://scrapy.readthedocs.org/en/latest/topics/extensions.html

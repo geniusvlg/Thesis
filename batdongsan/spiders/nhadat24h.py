@@ -27,9 +27,10 @@ class Nhadat24hSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.decode()
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
@@ -43,11 +44,19 @@ class Nhadat24hSpider(scrapy.Spider):
 			post_date = datetime.datetime.strptime(text.split(" ")[0],"%d/%m/%Y,")
 		return post_date
 
+	def is_number(self,text):
+		try:
+			float(s)
+			return True
+		except ValueError:
+			return False
+
 	def parse_item(self,response):
 		title = self.convert_unicode(response.xpath(".//div[contains(@class,'dv-ct-detail')]/h1/a/text()").extract_first())
 		post_id = response.url.split("-")[len(response.url.split("-"))-1]
 		property_details = response.xpath(".//div[contains(@class,'dv-tb-tsbds')]/table/tbody/tr")
 		area = self.convert_unicode(property_details[1].xpath(".//td/label/strong/text()").extract_first())
+		area=area.replace(',','.')
 
 		post_time = self.convert_unicode(response.xpath(".//div[contains(@class,'dv-time-dt')]/p/label")[0].xpath(".//text()").extract_first())
 		post_date = None
@@ -61,7 +70,8 @@ class Nhadat24hSpider(scrapy.Spider):
 		if re.search("HCM",province)!=None:
 			province="HCM"
 		price= self.convert_unicode(property_details[0].xpath(".//td/label/strong/text()").extract_first())
-		if price.isdigit()==True:
+		price=text.replace(',','.')
+		if self.is_number(price)==True:
 			price=float(price)
 			base = self.convert_unicode(property_details[0].xpath(".//td/label/text()").extract_first())
 			if base[0]=="T":

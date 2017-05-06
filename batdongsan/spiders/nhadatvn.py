@@ -8,7 +8,6 @@ from scrapy.selector import Selector
 
 class NhadatVnSpider(scrapy.Spider):
 	name = "Nhadatvn"
-	download_delay=0.5
 	last_post_time=''
 	is_last_sell=''
 	is_last_rent=''
@@ -28,9 +27,10 @@ class NhadatVnSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.decode()
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')

@@ -25,9 +25,10 @@ class Nhadat123Spider(scrapy.Spider):
 			return text
 		elif text==None:
 			return ''
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.decode()
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
