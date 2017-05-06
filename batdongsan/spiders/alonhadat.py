@@ -7,15 +7,15 @@ import os
 from scrapy.selector import Selector
 
 class AlonhadatSpider(scrapy.Spider):
-	name = 'alonhadat.com.vn'
+	name = 'alonhadat'
 	area = ''
 	last_post_time = ''
 	is_last_sell = ''
 	is_last_rent = ''
 	is_updated = ''
 	next_url = ''
-	def start_requests(self):
-		self.is_updated = False
+	def start_requests(self):		
+		self.is_updated = False 
 		self.is_last_sell = False
 		self.is_last_rent = False
 		urls = [
@@ -25,6 +25,7 @@ class AlonhadatSpider(scrapy.Spider):
 
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
+		
 
 	def convert_unicode(self,text):
 		if text=='':
@@ -51,13 +52,16 @@ class AlonhadatSpider(scrapy.Spider):
 
 	def parse(self, response):
 		# Get all items
-		items = response.xpath("//div[contains(@class, 'content-item')]")
+		items = response.xpath(".//div[@class= 'content-item']/div/div[@class='ct_title']/a/@href")
 		self.next_url = response.url.rpartition("--")[0] + '--'
 		if response.url.find('trang') == -1 and self.is_updated == False: # Process the first page
+			print ("Process First Page")
 			self.next_url = response.url.replace(".html","/trang--")
 			self.is_updated = True
+			print ("Start to open json file")
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
+				self.last_post_time=''
 				if "alonhadat.com.vn" in data:
 					self.last_post_time = datetime.datetime.strptime(data["alonhadat.com.vn"],"%d-%m-%Y %H:%M")
 					data["alonhadat.com.vn"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
@@ -65,23 +69,24 @@ class AlonhadatSpider(scrapy.Spider):
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
-
 		for item in items:
+			print ("Process each item")
+			print (item.extract())
 			if(re.search('cho-thue', response.url)!=None):
 				if self.is_last_rent == True:
 					return
-				else:
-					if self.is_last_rent == True:
-						return
+			else:
+				if self.is_last_rent == True:
+					return
 
-			item_url = item.xpath("//div[@class='ct_title']").extract_first()
+			item_url = "http://alonhadat.com.vn" + item.extract()
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
 
 		# Go to next page
-		print("Next url: " + self.next_url)
+		print("Next url 2: " + self.next_url)
 		next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract()
-		if len(next_pages == 1):	# Ony one 'nofollow'
+		if len(next_pages) == 1:	# Ony one 'nofollow'
 			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract_first()
 		else:	#  All pages are 'nofollow'
 			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href")[len(next_pages)].extract()
@@ -123,6 +128,8 @@ class AlonhadatSpider(scrapy.Spider):
 		else:
 			post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y") #
 		weekday = post_date.weekday()
+		print ("Post date:", post_date)
+		print ("Last post time:", self.last_post_time)
 		if post_date<self.last_post_time:
 			print(post_date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
 			if transaction_type=='Can ban':
