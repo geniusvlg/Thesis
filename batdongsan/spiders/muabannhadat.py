@@ -62,7 +62,7 @@ class MuabannhadatSpider(scrapy.Spider):
 			
 			os.remove('last_post_id.json')
 			with open('last_post_id.json', 'w') as f:
-				json.dump(data, f, indet = 4)
+				json.dump(data, f, indent = 4)
 
 		# Read every post one by one
 		for item in items:
@@ -75,6 +75,7 @@ class MuabannhadatSpider(scrapy.Spider):
 				if self.is_last_sell == True:
 					return
 			item_url = item.xpath("//a[@class='title-filter-link']/@href").extract_first()
+			print('item_url: ' + item_url)
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
 		# Go to the next page
@@ -82,6 +83,7 @@ class MuabannhadatSpider(scrapy.Spider):
 		if next_page != []:
 			next_page = response.xpath("//a[contains(@id,'_lnkNext')]/@href").extract_first()
 			next_page_address = "http://www.muabannhadat.vn" + next_page
+			print ('next_page_addres: ' + next_page_address)
 			yield scrapy.Request(next_page_address,callback=self.parse)
 
 	def parse_item(self, response):
