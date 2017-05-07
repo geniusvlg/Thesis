@@ -14,7 +14,7 @@ class MuabannhadatSpider(scrapy.Spider):
 	is_updated = ''
 	transaction_type = ''
 
-	def start_request(self):
+	def start_requests(self):
 		self.is_last_rent=False
 		self.is_last_sell=False
 		self.is_updated=False
@@ -56,9 +56,9 @@ class MuabannhadatSpider(scrapy.Spider):
 			self.is_updated = True
 			with open('last_post_id.json', 'r+') as f:
 				data = json.load(f)
-				if "muabannhadat.vn" in data:
-					self.last_post_time=datetime.datetime.strptime(data["muabannhadat.vn"],"%d-%m-%Y %H:%M")
-					data["muabannhadat.vn"]=(datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")		
+				if "muabannhadat" in data:
+					self.last_post_time=datetime.datetime.strptime(data["muabannhadat"],"%d-%m-%Y %H:%M")
+					data["muabannhadat"]=(datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")		
 			
 			os.remove('last_post_id.json')
 			with open('last_post_id.json', 'w') as f:

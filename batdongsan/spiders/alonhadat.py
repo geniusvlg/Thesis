@@ -51,6 +51,7 @@ class AlonhadatSpider(scrapy.Spider):
 
 
 	def parse(self, response):
+		print(response.url)
 		# Get all items
 		items = response.xpath(".//div[@class= 'content-item']/div/div[@class='ct_title']/a/@href")
 		self.next_url = response.url.rpartition("--")[0] + '--'
@@ -62,9 +63,9 @@ class AlonhadatSpider(scrapy.Spider):
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				self.last_post_time=''
-				if "alonhadat.com.vn" in data:
-					self.last_post_time = datetime.datetime.strptime(data["alonhadat.com.vn"],"%d-%m-%Y %H:%M")
-					data["alonhadat.com.vn"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
+				if "alonhadat" in data:
+					self.last_post_time = datetime.datetime.strptime(data["alonhadat"],"%d-%m-%Y %H:%M")
+					data["alonhadat"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
 			
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
