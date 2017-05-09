@@ -31,7 +31,6 @@ class MuabannhadatSpider(scrapy.Spider):
 		text=re.sub(unichr(272),'D',text);
 		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
-		text=text.decode()
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
@@ -76,7 +75,6 @@ class MuabannhadatSpider(scrapy.Spider):
 				if self.is_last_sell == True:
 					return
 			item_url = "http://www.muabannhadat.vn" + item.extract()
-			print('item_url: ' + item_url)
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
 		# Go to the next page
@@ -93,16 +91,25 @@ class MuabannhadatSpider(scrapy.Spider):
 		desciption = self.convert_unicode(re.sub("\r|\n|\t",""," ".join(response.xpath(".//div[contains(@id, 'Description')]/text()").extract()))).strip(" ")
 
 		# Get the price
-		price = self.convert_price(response.xpath('//span[contains(@class,"price")]/text()').extract_first())
+		price = response.xpath('//span[contains(@class,"price")]/text()').extract_first()
+		if price == None:
+			price = ""
+		price = self.convert_price(price)
 
 		# Get the area
-		area = self.convert_unicode(response.xpath("//span[contains(@id,'_lblSurface')]/text()").extract_first()).replace(" m2","")
+		area = response.xpath("//span[contains(@id,'_lblSurface')]/text()").extract_first()
+		if area == None:
+			area = ""
+		area = self.convert_unicode(area)
+		area = area.replace(" m2","")
 		
 		# Get the post id
 		id = response.url.rsplit('-',1)[1]
 
 		# Get the post title
-		title = self.convert_unicode(response.xpath("//h1[contains(@class, 'navi-title')]//text()").extract_first()).strip()
+		title = response.xpath("//h1[contains(@class, 'navi-title')]//text()").extract_first()
+		title = self.convert_unicode(title)
+		title = title.strip()
 
 		# Get date post
 		date_post =  self.convert_unicode(response.xpath("//span[contains(@id,'DateCreated')]/text()").extract_first()).replace(".","-")
@@ -115,9 +122,6 @@ class MuabannhadatSpider(scrapy.Spider):
 			else:
 				self.is_last_sell = True
 			return
-
-		# Get updated post
-		date_update = self.convert_unicode(response.xpath("//span[contains(@class,'date-update')]/text()").extract_first()).replace(".","-")
 
 		# Get city 
 		city = self.convert_unicode(response.xpath("//span[contains(@id,'City')]/a/text()").extract_first())
@@ -133,8 +137,15 @@ class MuabannhadatSpider(scrapy.Spider):
 		if contact_name == []:
 			contact_name = response.xpath("//div[contains(@class,'name-contact')]/a")
 		contact_name = contact_name.xpath("text()").extract_first()
-		author = self.convert_unicode(contact_name)
-		
+		if contact_name == None:
+			author = ""
+		else:
+			author = self.convert_unicode(contact_name)
+
+		# Get house-type
+		type_list = response.xpath("//p[contains(@class,'cusp')]")
+		house_type = type_list[1].xpath("//p[contains(@class,'cusp')]//text()").extract_first()
+
 		yield {
 			'post-id': id,
 			'website': "muabannhadat.vn",
@@ -145,5 +156,6 @@ class MuabannhadatSpider(scrapy.Spider):
 			'area':area,
 			'price':price,
 			'transaction-type': self.transaction_type,
-			'description': desciption
+			'description': desciption,
+			'house-type': house_type
 		}

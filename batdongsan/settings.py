@@ -14,7 +14,7 @@ BOT_NAME = 'batdongsan'
 SPIDER_MODULES = ['batdongsan.spiders']
 NEWSPIDER_MODULE = 'batdongsan.spiders'
 
-LOG_LEVEL = 'WARNING'
+LOG_LEVEL = 'DEBUG'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'batdongsan (+http://www.yourdomain.com)'
