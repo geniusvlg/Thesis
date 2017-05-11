@@ -113,14 +113,14 @@ class AlonhadatSpider(scrapy.Spider):
 		# Get price
 		price = response.xpath("//span[@class='price']/span[@class='value']/text()").extract_first()
 		price = self.convert_unicode(price)
-		if price.find("thuan") !=1:
+		if price.find("thuan") !=-1:
 			return
 		price = self.convert_price(price)
 		# Get post id
 		post_id = response.xpath(".//tr/td/text()")[1].extract()
 
 		# Get property type
-		house_type = self.convert_unicode(response.xpath(".//tr/td/text()")[13].extract())
+		house_type = self.convert_unicode(response.xpath("//td[contains(text(),'BDS')]/following-sibling::td").extract_first())
 
 		# Get transaction type
 		transaction_type = self.convert_unicode(response.xpath(".//tr/td/text()")[7].extract())
@@ -150,6 +150,11 @@ class AlonhadatSpider(scrapy.Spider):
 		location = response.xpath("//div[@class='address']/span[@class='value']/text()").extract_first()
 		location = self.convert_unicode(location)
 		location_list = location.split(',')
+
+		# Get description
+		description = response.xpath("//div[contains(@class,'detail')]//text()").extract()
+		description = '-'.join(description)
+		description = self.convert_unicode(description)
 
 		if len(location_list) > 3:
 			# Get road
@@ -189,7 +194,8 @@ class AlonhadatSpider(scrapy.Spider):
 			'area':self.area,
 			'price':price,
 			'transaction-type': transaction_type,
-			'house-type': property_type
+			'house-type': {'general': "", 'detailed': house_type},
+			'description': description
 		}
 
 
