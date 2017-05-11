@@ -46,10 +46,38 @@ class Nhadat24hSpider(scrapy.Spider):
 
 	def is_number(self,text):
 		try:
-			float(s)
+			float(text)
 			return True
 		except ValueError:
 			return False
+
+	def convert_price(self,text,area):
+		if(bool(re.search(r'\d',text))==False):
+			return text
+		else :
+			#get the base number, and the unit (Ngan, Trieu, Ty)
+			price_s=text.split(' ')
+			real_price=0
+			i=0
+			while(price_s[i]==''):
+				i+=1
+			try:
+				base=float(re.sub('\D','.',price_s[i]))
+				unit=price_s[i+1]
+				if unit[0]=='N' or unit[0]=='n':
+					real_price+=(base)*1000
+				elif unit[0]=='T' or unit[0]=='t':
+					if unit[1]=='r':
+						real_price+=(base)*1000000
+					else:
+						real_price+=(base)*1000000000
+				if 'm2' in text:
+					a=float(area.split(' ')[0])
+
+					real_price*=a
+				return real_price
+			except ValueError:
+				return 'Thoa thuan'
 
 	def parse_item(self,response):
 		title = self.convert_unicode(response.xpath(".//div[contains(@class,'dv-ct-detail')]/h1/a/text()").extract_first())
@@ -70,7 +98,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		if re.search("HCM",province)!=None:
 			province="HCM"
 		price= self.convert_unicode(property_details[0].xpath(".//td/label/strong/text()").extract_first())
-		price=text.replace(',','.')
+		price=price.replace(',','.')
 		if self.is_number(price)==True:
 			price=float(price)
 			base = self.convert_unicode(property_details[0].xpath(".//td/label/text()").extract_first())

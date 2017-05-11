@@ -8,7 +8,7 @@ from scrapy.selector import Selector
 from scrapy.http import HtmlResponse
 
 
-class Nhadat24hSpider(scrapy.Spider):
+class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
 	is_updated=False
@@ -22,7 +22,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		]
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
-	def convert_price(self,text):
+	def convert_price(self,text,area):
 		if(bool(re.search(r'\d',text))==False):
 			return text
 		else :
@@ -41,6 +41,9 @@ class Nhadat24hSpider(scrapy.Spider):
 					real_price+=(base)*1000000
 				else:
 					real_price+=(base)*1000000000
+			if 'm2' in unit:
+				a=area.split('m')
+				real_price*=float(a[0])
 			return real_price
 	def convert_unicode(self,text):
 		if text=='':
@@ -52,6 +55,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
+		text=text.strip()
 		return text
 
 	def parse(self,response):
@@ -91,6 +95,7 @@ class Nhadat24hSpider(scrapy.Spider):
 				if "batdongsan" in data:
 					self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
 				data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+				print(self.last_post_time)
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
@@ -129,21 +134,38 @@ class Nhadat24hSpider(scrapy.Spider):
 		meta=response.meta
 		response=HtmlResponse(url=response.url,body=response.body)
 
-		post_detail=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[0]
-		post_detail_boxes=post_detail.xpath('./div/div[@class="left-detail"]/div')
-		i=1
-		if post_detail_boxes[0].xpath('./@id').extract_first()=="LeftMainContent__productDetail_project":
-			i=0
-		post_id=self.convert_unicode(post_detail_boxes[2-i].xpath("./div[@class='right']/text()").extract_first())
+		# post_detail=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[0]
+		# post_detail_boxes=post_detail.xpath('./div/div[@class="left-detail"]/div')
+		# i=1
+		# if post_detail_boxes[0].xpath('./@id').extract_first()=="LeftMainContent__productDetail_project":
+		# 	i=0
+		# post_id=self.convert_unicode(post_detail_boxes[2-i].xpath("./div[@class='right']/text()").extract_first())
 
-		location_detail=self.convert_unicode(post_detail_boxes[1-i].xpath("./div[@class='right']/text()").extract_first())
-		post_date=self.convert_unicode(post_detail_boxes[4-i].xpath("./div[@class='right']/text()").extract_first())
-		post_date=post_date.replace(' ','')
+		# location_detail=self.convert_unicode(post_detail_boxes[1-i].xpath("./div[@class='right']/text()").extract_first())
+		# post_date=self.convert_unicode(post_detail_boxes[4-i].xpath("./div[@class='right']/text()").extract_first())
+		# post_date=post_date.replace(' ','')
+		# post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y")
+		# author_box=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[1]
+		# author_detail=author_box.xpath("./div/div")
+		# author=self.convert_unicode(author_detail[1].xpath("./div[@class='right']/text()").extract_first())
+
+		item_details = response.xpath("//div[@class='table-detail']")
+
+		location_detail=self.convert_unicode(item_details[0].xpath('./div[@class="row"]')[1].xpath('./div[@class="right"]/text()').extract_first())
+		author_index=0
+		if len(item_details)==2:
+				author_index=1
+		else:
+			author_index==2
+
+		author_line=item_details[author_index].xpath("./div/div[@id='LeftMainContent__productDetail_contactName']/div[@class='right']")
+		author=''
+		if len(author_line)>0:
+			author=self.convert_unicode(author_line[0].xpath('./text()').extract_first())
+		post_id = response.xpath("//div[@class='prd-more-info']/div/text()")[0].extract().strip()
+
+		post_date = response.xpath("//div[@class='prd-more-info']/div/text()")[2].extract().strip()
 		post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y")
-		author_box=response.xpath("//div[@class='pm-content-detail']/table/tr/td")[1]
-		author_detail=author_box.xpath("./div/div")
-		author=self.convert_unicode(author_detail[1].xpath("./div[@class='right']/text()").extract_first())
-		location=response.xpath("//span[contains(@class,'diadiem-title')]/text()").extract()[2].split(' - ')
 
 		county=self.convert_unicode(meta['county'])
 		province=self.convert_unicode(meta['province'])
@@ -154,7 +176,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		if area=="Khong xac dinh":
 			area=''
 		price=self.convert_unicode(area_price_text[0])
-		price=self.convert_price(price)
+		price=self.convert_price(price,area)
 		housetype=""
 		transaction_type=""
 		house_type_text=self.convert_unicode(response.xpath("//span[contains(@class,'diadiem-title')]/a/text()").extract_first())

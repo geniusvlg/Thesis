@@ -6,6 +6,14 @@ import json
 import os
 from scrapy.selector import Selector
 
+
+def is_number(text):
+		try:
+			float(text)
+			return True
+		except ValueError:
+			return False
+
 class Nhadat123Spider(scrapy.Spider):
 	name="123nhadat"
 	last_post_time=''
@@ -33,7 +41,7 @@ class Nhadat123Spider(scrapy.Spider):
 		text=text.replace('\t','')
 		text=text.replace('\r','')
 		return text
-	def convert_price(self,text):
+	def convert_price(self,text,area):
 		if(bool(re.search(r'\d',text))==False):
 			return text
 		else :
@@ -43,16 +51,24 @@ class Nhadat123Spider(scrapy.Spider):
 			i=0
 			while(price_s[i]==''):
 				i+=1
-			base=float(re.sub('\D','.',price_s[i]))
-			unit=price_s[i+1]
-			if unit[0]=='N' or unit[0]=='n':
-				real_price+=(base)*1000
-			elif unit[0]=='T' or unit[0]=='t':
-				if unit[1]=='r':
-					real_price+=(base)*1000000
-				else:
-					real_price+=(base)*1000000000
-			return real_price
+			try:
+				base=float(re.sub('\D','.',price_s[i]))
+				unit=price_s[i+1]
+				if unit[0]=='N' or unit[0]=='n':
+					real_price+=(base)*1000
+				elif unit[0]=='T' or unit[0]=='t':
+					if unit[1]=='r':
+						real_price+=(base)*1000000
+					else:
+						real_price+=(base)*1000000000
+				if 'm2' in text:
+					a=float(area.split(' ')[0])
+
+					real_price*=a
+				return real_price
+			except ValueError:
+				return 'Thoa thuan'
+			
 	def convert_time(self,text,item):
 		post_time=None
 		if re.search("/",text):
@@ -110,11 +126,12 @@ class Nhadat123Spider(scrapy.Spider):
 		area= self.convert_unicode(info_no_1[1].xpath("./b/text()").extract_first())
 		raw_price= self.convert_unicode(info_no_1[0].xpath("./b/text()").extract_first())
 		price=raw_price
+		raw_price=raw_price.replace(',','.')
 		if raw_price==None:
 			price="Thoa thuan"
 		else:
-			if raw_price.split(" ")[0].isdigit():
-				price=self.convert_price(raw_price)
+			if is_number(raw_price.split(" ")[0]):
+				price=self.convert_price(raw_price,area)
 			else:
 				price=raw_price
 
