@@ -28,8 +28,8 @@ class NhadatVnSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(chr(272),'D',text);
-		text=re.sub(chr(273),'d',text);
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode()
 		text=text.replace('\n','')

@@ -7,7 +7,7 @@ import os
 from scrapy.selector import Selector
 
 class MuabannhadatSpider(scrapy.Spider):
-	name = "muabannhadat.vn"
+	name = "muabannhadat"
 	last_post_time=''
 	is_last_rent = ''
 	is_last_sell = ''

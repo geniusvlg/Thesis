@@ -15,7 +15,6 @@ class QuotesSpider(scrapy.Spider):
 	is_updated=''
 
 	def start_requests(self):
-		global is_last
 		is_last=False
 		urls = [
 		'http://alonhadat.com.vn/nha-dat/can-ban.html'
