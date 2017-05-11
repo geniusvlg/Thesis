@@ -2,5 +2,7 @@
 /ProcessData/*.json
 *.json
 *.pyc
-nhadatvn.jl
-**/*.jl
+*.jl
+./*.jl
+/ProcessData/process
+/ProcessData/*.jl
