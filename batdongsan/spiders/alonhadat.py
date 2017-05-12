@@ -45,7 +45,7 @@ class AlonhadatSpider(scrapy.Spider):
 			real_price = float(list_price[0].replace(",",".")) * 1000000 * int(self.area)
 			return real_price
 		if list_price[1] == 'trieu':
-			real_price = float(list_price[0]) * 1000000
+			real_price = float(list_price[0].replace(",",".")) * 1000000
 		else:
 			real_price = float(list_price[0].replace(",",".")) * 1000000000
 		return real_price
@@ -166,9 +166,10 @@ class AlonhadatSpider(scrapy.Spider):
 			# Get county
 			county = location_list[2]
 
-			# Get city
-			city = location_list[3]
-		else:
+			# Get province
+			province = location_list[3]
+
+		elif len(location_list) > 2:
 			road = ''
 
 			# Get ward
@@ -177,8 +178,19 @@ class AlonhadatSpider(scrapy.Spider):
 			# Get county
 			county = location_list[1]
 
-			# Get city
-			city = location_list[2]
+			# Get province
+			province = location_list[2]
+
+		else:
+			road = ""
+			ward = ""
+
+			# Get county
+			county = location_list[0]
+
+			# Get province
+			province = location_list[1]
+
 
 
 		# Get author name
@@ -190,7 +202,7 @@ class AlonhadatSpider(scrapy.Spider):
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
-			'location': {'city': city, 'county': county, 'road':road, 'ward': ward},
+			'location': {'province': province, 'county': county, 'road':road, 'ward': ward},
 			'area':self.area,
 			'price':price,
 			'transaction-type': transaction_type,
