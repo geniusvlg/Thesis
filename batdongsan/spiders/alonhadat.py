@@ -113,7 +113,7 @@ class AlonhadatSpider(scrapy.Spider):
 		# Get price
 		price = response.xpath("//span[@class='price']/span[@class='value']/text()").extract_first()
 		price = self.convert_unicode(price)
-		if price.find("thuan") !=1:
+		if price.find("thuan") !=-1:
 			return
 		price = self.convert_price(price)
 		# Get post id
@@ -121,6 +121,8 @@ class AlonhadatSpider(scrapy.Spider):
 
 		# Get property type
 		house_type = self.convert_unicode(response.xpath(".//tr/td/text()")[13].extract())
+		house_type = house_type.replace("<td>","")
+		house_type = house_type.replace("</td>","")
 
 		# Get transaction type
 		transaction_type = self.convert_unicode(response.xpath(".//tr/td/text()")[7].extract())
