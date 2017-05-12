@@ -121,6 +121,8 @@ class AlonhadatSpider(scrapy.Spider):
 
 		# Get property type
 		house_type = self.convert_unicode(response.xpath("//td[contains(text(),'BDS')]/following-sibling::td").extract_first())
+		house_type = house_type.replace("<td>","")
+		house_type = house_type.replace("</td>","")
 
 		# Get transaction type
 		transaction_type = self.convert_unicode(response.xpath(".//tr/td/text()")[7].extract())
