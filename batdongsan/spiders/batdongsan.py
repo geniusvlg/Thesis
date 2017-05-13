@@ -7,7 +7,6 @@ import os
 from scrapy.selector import Selector
 from scrapy.http import HtmlResponse
 
-
 class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
@@ -48,8 +47,8 @@ class BatdongsanSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(chr(272),'D',text);
-		text=re.sub(chr(273),'d',text);
+		text=re.sub(chr(272),'D',text)
+		text=re.sub(chr(273),'d',text)
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode()
 		text=text.replace('\n','')
@@ -57,6 +56,14 @@ class BatdongsanSpider(scrapy.Spider):
 		text=text.replace('\r','')
 		text=text.strip()
 		return text
+
+	def get_selected(self,item):
+		if item==[]:
+			return ''
+		if int(item.xpath('./@vl').extract_first())<=0:
+			return ''
+		else:
+			return self.convert_unicode(item.xpath('./text()').extract_first())
 
 	def parse(self,response):
 		response=HtmlResponse(url=response.url,body=response.body)
@@ -78,6 +85,7 @@ class BatdongsanSpider(scrapy.Spider):
 		for index,href in enumerate(zones_href):
 			print(self.convert_unicode(meta['province']),self.convert_unicode(texts[index]))
 			yield scrapy.Request(url=self.baseUrl+href,meta={'county':texts[index],'province':meta['province']},callback=self.parse_list)
+
 
 	def parse_list(self,response):
 		meta=response.meta
@@ -108,14 +116,17 @@ class BatdongsanSpider(scrapy.Spider):
 			is_last_page=True
 		items=response.xpath("//div[contains(@class,'search-productItem')]")
 		for item in items:
+
 			url=item.xpath("./div[@class='p-title']/h3/a/@href").extract_first()
 			date_text=self.convert_unicode(item.xpath("./div[@class='p-main']/div[contains(@class,'p-bottom-crop')]/div[contains(@class,'floatright')]/text()").extract_first())
 			post_date=datetime.datetime.strptime(date_text,"%d/%m/%Y")
+			print(url)
+			print("="*100)
 			if post_date<self.last_post_time:
 				already_crawl=True
-			if len(url)>0:
-				yield scrapy.Request(url=(self.baseUrl+url),meta={'province':meta['province'],'county':meta['county']},callback=self.parseitem)
-		print(response.url,already_crawl,is_last_page);
+			else:
+				if len(url)>0:
+					yield scrapy.Request(url=(self.baseUrl+url),meta={'province':meta['province'],'county':meta['county']},callback=self.parseitem)
 		if is_last_page==False and already_crawl==False:
 
 			next_page_url=response.url.split("/")
@@ -152,11 +163,15 @@ class BatdongsanSpider(scrapy.Spider):
 		item_details = response.xpath("//div[@class='table-detail']")
 
 		location_detail=self.convert_unicode(item_details[0].xpath('./div[@class="row"]')[1].xpath('./div[@class="right"]/text()').extract_first())
+
+		project=''
+
 		author_index=0
 		if len(item_details)==2:
 				author_index=1
 		else:
 			author_index==2
+			project=self.convert_unicode(item_details[1].xpath("./div[@class='row']/div[@class='right']/text()").extract_first())
 
 		author_line=item_details[author_index].xpath("./div/div[@id='LeftMainContent__productDetail_contactName']/div[@class='right']")
 		author=''
@@ -169,6 +184,12 @@ class BatdongsanSpider(scrapy.Spider):
 
 		county=self.convert_unicode(meta['county'])
 		province=self.convert_unicode(meta['province'])
+		ward=self.get_selected(response.xpath('//div[@id="divWardOptions"]/ul/li[contains(@class,"current")]'))
+		road=self.get_selected(response.xpath('//div[@id="divStreetOptions"]/ul/li[contains(@class,"current")]'))
+
+		bedcount=self.get_selected(response.xpath('//div[@id="divBedRoomOptions"]/ul/li[contains(@class,"current")]'))
+		if bedcount!='':
+			bedcount=int(bedcount[:-1])
 
 		title=self.convert_unicode(response.xpath("//div[@class='pm-title']/h1/text()").extract_first())
 		area_price_text=response.xpath("//span[contains(@class,'gia-title')]/strong/text()").extract()
@@ -197,10 +218,12 @@ class BatdongsanSpider(scrapy.Spider):
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': post_date.weekday()},
 			'title': title,
-			'location': {'county': county,'province': province,'location-detail':location_detail},
+			'location': {'county': county, 'province': province, 'ward': ward, 'road': road,'location-detail':location_detail},
+			'project': project,
+			'bed-count': bedcount,
 			'area':area,
 			'price':price,
 			'transaction-type': transaction_type,
-			'house-type': {'general':"",'detailed':housetype},
+			'house-type': housetype,
 			'description': description
 		}

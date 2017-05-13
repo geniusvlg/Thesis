@@ -5,11 +5,13 @@ import datetime
 import json
 import os
 from scrapy.selector import Selector
+import cfscrape
 
 class Nhadat24hSpider(scrapy.Spider):
 	name="nhadat24h"
 	last_post_time=''
 	is_updated=''
+
 	start_urls=[
 		"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
 		"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
@@ -22,13 +24,18 @@ class Nhadat24hSpider(scrapy.Spider):
 			"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
 		]
 		for url in urls:
-			yield scrapy.Request(url=url,callback=self.parse)
+			token, agent = cfscrape.get_tokens(url)
+			self.token=token
+			self.agent=agent
+			yield scrapy.Request(url=url,callback=self.parse,
+				cookies=token,
+				headers={'User-Agent':agent})
 
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode()
 		text=text.replace('\n','')
@@ -123,11 +130,13 @@ class Nhadat24hSpider(scrapy.Spider):
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': post_date.weekday()},
 			'title': title,
-			'location': {'county': county,'province': province,'location-detail':''},
+			'location': {'county': county,'province': province,'ward': '','road': '','location-detail':''},
+			'project' : '',
+			'bed-count' : '',
 			'area':area,
 			'price':price,
 			'transaction-type': transaction_type,
-			'house-type': {'general':"",'detailed':housetype},
+			'house-type': housetype,
 			'description': description
 		}
 
@@ -162,11 +171,11 @@ class Nhadat24hSpider(scrapy.Spider):
 				if post_date.year<2012:
 					is_old=True
 					break
-			yield scrapy.Request("http://nhadat24h.net" + post_url,callback= self.parse_item)
+			yield scrapy.Request("http://nhadat24h.net" + post_url,callback= self.parse_item,cookies=self.token,headers={'User-Agent':self.agent})
 
 		next_url=response.xpath(".//a[contains(@title,'Trang sau')]/@href").extract_first()
 		if next_url != None and is_old == False and is_last==False:
-			yield scrapy.Request("http://nhadat24h.net" + next_url, callback= self.parse)
+			yield scrapy.Request("http://nhadat24h.net" + next_url, callback= self.parse,cookies=self.token,headers={'User-Agent':self.agent})
 	def __repr__(self):
 		"""only print out attr1 after exiting the Pipeline"""
 		return repr({})

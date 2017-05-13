@@ -3,6 +3,6 @@
 *.json
 *.pyc
 *.jl
-./*.jl
 /ProcessData/process
 /ProcessData/*.jl
+/batdongsan/settings.py
