@@ -10,6 +10,7 @@ class NhadatVnSpider(scrapy.Spider):
 	name = "Nhadatvn"
 	last_post_time=''
 	is_last_sell=''
+	download_delay=2
 	is_last_rent=''
 	is_updated=''
 	def start_requests(self):
@@ -36,7 +37,7 @@ class NhadatVnSpider(scrapy.Spider):
 		text=text.replace('\r','')
 		return text
 
-	def convert_price(self,text):
+	def convert_price(self,text,area):
 		if(bool(re.search(r'\d',text))==False):
 			return text
 		else :
@@ -55,6 +56,10 @@ class NhadatVnSpider(scrapy.Spider):
 					real_price+=(base)*1000000
 				else:
 					real_price+=(base)*1000000000
+				if 'm2' in text:
+					a=float(area)
+
+					real_price*=a
 			return real_price
 
 	def parse_item(self,response):
@@ -108,7 +113,7 @@ class NhadatVnSpider(scrapy.Spider):
 			area= None
 			price= self.convert_unicode(property_info[2])
 			
-		price=self.convert_price(price)
+		price=self.convert_price(price,area)
 
 		post_id = author_info[0]
 		author=response.xpath(".//div[contains(@class,'uifright')]/dl/dd")[1].xpath("./div/a/@title").extract_first()

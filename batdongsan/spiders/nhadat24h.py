@@ -5,11 +5,13 @@ import datetime
 import json
 import os
 from scrapy.selector import Selector
+import cfscrape
 
 class Nhadat24hSpider(scrapy.Spider):
 	name="nhadat24h"
 	last_post_time=''
 	is_updated=''
+
 	start_urls=[
 		"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
 		"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
@@ -22,13 +24,18 @@ class Nhadat24hSpider(scrapy.Spider):
 			"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
 		]
 		for url in urls:
-			yield scrapy.Request(url=url,callback=self.parse)
+			token, agent = cfscrape.get_tokens(url)
+			self.token=token
+			self.agent=agent
+			yield scrapy.Request(url=url,callback=self.parse,
+				cookies=token,
+				headers={'User-Agent':agent})
 
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode()
 		text=text.replace('\n','')
@@ -46,10 +53,38 @@ class Nhadat24hSpider(scrapy.Spider):
 
 	def is_number(self,text):
 		try:
-			float(s)
+			float(text)
 			return True
 		except ValueError:
 			return False
+
+	def convert_price(self,text,area):
+		if(bool(re.search(r'\d',text))==False):
+			return text
+		else :
+			#get the base number, and the unit (Ngan, Trieu, Ty)
+			price_s=text.split(' ')
+			real_price=0
+			i=0
+			while(price_s[i]==''):
+				i+=1
+			try:
+				base=float(re.sub('\D','.',price_s[i]))
+				unit=price_s[i+1]
+				if unit[0]=='N' or unit[0]=='n':
+					real_price+=(base)*1000
+				elif unit[0]=='T' or unit[0]=='t':
+					if unit[1]=='r':
+						real_price+=(base)*1000000
+					else:
+						real_price+=(base)*1000000000
+				if 'm2' in text:
+					a=float(area.split(' ')[0])
+
+					real_price*=a
+				return real_price
+			except ValueError:
+				return 'Thoa thuan'
 
 	def parse_item(self,response):
 		title = self.convert_unicode(response.xpath(".//div[contains(@class,'dv-ct-detail')]/h1/a/text()").extract_first())
@@ -70,7 +105,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		if re.search("HCM",province)!=None:
 			province="HCM"
 		price= self.convert_unicode(property_details[0].xpath(".//td/label/strong/text()").extract_first())
-		price=text.replace(',','.')
+		price=price.replace(',','.')
 		if self.is_number(price)==True:
 			price=float(price)
 			base = self.convert_unicode(property_details[0].xpath(".//td/label/text()").extract_first())
@@ -95,11 +130,13 @@ class Nhadat24hSpider(scrapy.Spider):
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': post_date.weekday()},
 			'title': title,
-			'location': {'county': county,'province': province,'location-detail':''},
+			'location': {'county': county,'province': province,'ward': '','road': '','location-detail':''},
+			'project' : '',
+			'bed-count' : '',
 			'area':area,
 			'price':price,
 			'transaction-type': transaction_type,
-			'house-type': {'general':"",'detailed':housetype},
+			'house-type': housetype,
 			'description': description
 		}
 
@@ -134,11 +171,11 @@ class Nhadat24hSpider(scrapy.Spider):
 				if post_date.year<2012:
 					is_old=True
 					break
-			yield scrapy.Request("http://nhadat24h.net" + post_url,callback= self.parse_item)
+			yield scrapy.Request("http://nhadat24h.net" + post_url,callback= self.parse_item,cookies=self.token,headers={'User-Agent':self.agent})
 
 		next_url=response.xpath(".//a[contains(@title,'Trang sau')]/@href").extract_first()
 		if next_url != None and is_old == False and is_last==False:
-			yield scrapy.Request("http://nhadat24h.net" + next_url, callback= self.parse)
+			yield scrapy.Request("http://nhadat24h.net" + next_url, callback= self.parse,cookies=self.token,headers={'User-Agent':self.agent})
 	def __repr__(self):
 		"""only print out attr1 after exiting the Pipeline"""
 		return repr({})

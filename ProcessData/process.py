@@ -1,7 +1,7 @@
 import os
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
-
+import datetime
 
 class ProcessData:
 
@@ -35,13 +35,16 @@ class ProcessData:
 			self.printOutput(filename)
 
 	def printOutput(self,filename):
-		with open(filename[:-2]+'output.json','w') as f:
+		with open('./processed/'+filename[:-2]+'output.json','w') as f:
+			print(len(self.data))
 			json.dump(self.data,f,indent=4,separators=(',',': '),sort_keys=True)
 
 	def remove_duplication(self):
+		allcount=0
 		with open('test.txt','w') as f:
 			for province in self.data:
 				for county in self.data[province]:
+					print(county)
 					for house_type in self.data[province][county]:
 						item_list=self.data[province][county][house_type]
 						desc_list=[]
@@ -60,17 +63,22 @@ class ProcessData:
 								index=query[0]
 								for i in range(index+1,count):
 									if matrix[index][i]>0.8 and item_list[i]['price']==item_list[index]['price'] and item_list[i]['area']==item_list[index]['area']:
-										if i in query:
-											json.dump(item_list[i],f,indent=4)
-											json.dump(item_list[index],f,indent=4)
-											f.write('\n===========================\n')
+										delta=datetime.datetime.strptime(str(item_list[index]['post-time']['date']),'%d-%m-%Y')-datetime.datetime.strptime(str(item_list[i]['post-time']['date']),'%d-%m-%Y')
+										if delta.days<30:
+											if i in query:
+												json.dump(item_list[i],f,indent=4)
+												json.dump(item_list[index],f,indent=4)
+												f.write('\n===========================\n')
 
-											query.remove(i)
-											del_list.append(i)
+												query.remove(i)
+												del_list.append(i)
 								del query[0]
 							del_list.sort(reverse=True)
 							for i in del_list:
 								del item_list[i]
+						allcount+=len(item_list)
+		print (allcount)
+
 
 
 if __name__=='__main__':
