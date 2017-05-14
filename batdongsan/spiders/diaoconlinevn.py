@@ -86,7 +86,7 @@ class QuotesSpider(scrapy.Spider):
 		print ('NEXT PAGE URL: ' + next_href)
 		if next_href == None:
 			next_href = "http://http://diaoconline.vn" + next_href;
-			yield SplashRequest(next_href, self.parse)
+			yield SplashRequest(next_href, callback=self.parse)
 
 	def	parse_item(self, response):
 		# Get price of property
