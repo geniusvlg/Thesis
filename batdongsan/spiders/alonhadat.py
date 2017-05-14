@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import scrapy
 import re
 import unicodedata
@@ -10,15 +11,11 @@ class AlonhadatSpider(scrapy.Spider):
 	name = 'alonhadat'
 	area = ''
 	last_post_time = ''
-	is_last_sell = ''
-	is_last_rent = ''
 	is_updated = ''
 	next_url = ''
 
 	def start_requests(self):		
 		self.is_updated = False 
-		self.is_last_sell = False
-		self.is_last_rent = False
 		urls = [
 		'http://alonhadat.com.vn/nha-dat/can-ban.html',
 		'http://alonhadat.com.vn/nha-dat/cho-thue.html'
@@ -75,12 +72,6 @@ class AlonhadatSpider(scrapy.Spider):
 			self.next_url = response.url.rpartition("--")[0] + '--'
 
 		for item in items:
-			if(re.search('cho-thue', response.url)!=None):
-				if self.is_last_rent == True:
-					return
-			else:
-				if self.is_last_rent == True:
-					return
 			item_url = "http://alonhadat.com.vn" + item.extract()
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
@@ -116,16 +107,29 @@ class AlonhadatSpider(scrapy.Spider):
 		if price.find("thuan") !=-1:
 			return
 		price = self.convert_price(price)
-		# Get post id
-		post_id = response.xpath(".//tr/td/text()")[1].extract()
 
 		# Get property type
-		house_type = self.convert_unicode(response.xpath("//td[contains(text(),'BDS')]/following-sibling::td").extract_first())
+		house_type = self.convert_unicode(response.xpath(u"//td[contains(text(),'Loại BDS')]/following-sibling::td").extract_first())
 		house_type = house_type.replace("<td>","")
 		house_type = house_type.replace("</td>","")
 
-		# Get transaction type
-		transaction_type = self.convert_unicode(response.xpath(".//tr/td/text()")[7].extract())
+		# Get project
+		project = response.xpath("//span[@class='project']//text()").extract_first()
+		if project == None:
+			project = ""
+
+		# Get transaction_type
+		transaction_type = self.convert_unicode(response.xpath(u"//td[contains(text(),'Loại tin')]/following-sibling::td").extract_first())
+		if transaction_type == "---":
+			transaction_type = ""
+
+		#Get bedcount
+		bedcount = response.xpath(u"//td[contains(text(),'Số phòng ngủ')]/following-sibling::td").extract_first()
+		if bedcount == "---":
+			bedcount = ""
+
+		# Get post id
+		post_id = response.xpath(u"//td[contains(text(),'Mã tin')]/following-sibling::td").extract_first()
 
 		# Get post time
 		post_date = response.xpath("//span[@class='date']/text()").extract_first()
@@ -139,10 +143,6 @@ class AlonhadatSpider(scrapy.Spider):
 		weekday = post_date.weekday()
 		if post_date<self.last_post_time:
 			print(post_date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
-			if transaction_type=='Can ban':
-				self.is_last_sell=True
-			else:
-				self.is_last_rent=True
 			return
 	
 		# Get title
@@ -151,6 +151,7 @@ class AlonhadatSpider(scrapy.Spider):
 		# Get location
 		location = response.xpath("//div[@class='address']/span[@class='value']/text()").extract_first()
 		location = self.convert_unicode(location)
+		location_detail = location
 		location_list = location.split(',')
 
 		# Get description
@@ -197,6 +198,8 @@ class AlonhadatSpider(scrapy.Spider):
 
 		# Get author name
 		author = response.xpath("//span[@class='name']/span[@class='value']/text()").extract_first()
+		if author == None:
+			author = ""
 
 		yield {
 			'post-id': post_id,
@@ -204,12 +207,14 @@ class AlonhadatSpider(scrapy.Spider):
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
-			'location': {'province': province, 'county': county, 'road':road, 'ward': ward},
+			'location': {'province': province, 'county': county, 'road':road, 'ward': ward, 'detailed': location_detail},
 			'area':self.area,
 			'price':price,
 			'transaction-type': transaction_type,
-			'house-type': {'general': "", 'detailed': house_type},
-			'description': description
+			'house-type': house_type,
+			'description': description,
+			'project': project,
+			'bedcount': bedcount
 		}
 
 

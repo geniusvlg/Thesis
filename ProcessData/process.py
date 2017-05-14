@@ -27,9 +27,9 @@ class ProcessData:
 				if byProvince.get(item['location']['county'])==None:
 					byProvince[item['location']['county']]={}
 				byCounty=byProvince[item['location']['county']]
-				if byCounty.get(item['house-type']['detailed'])==None:
-					byCounty[item['house-type']['detailed']]=[]
-				container=byCounty[item['house-type']['detailed']]
+				if byCounty.get(item['house-type'])==None:
+					byCounty[item['house-type']=[]
+				container=byCounty[item['house-type']]
 				container.append(item)
 			self.remove_duplication()
 			self.printOutput(filename)

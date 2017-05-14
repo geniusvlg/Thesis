@@ -19,8 +19,9 @@ class MuabannhadatSpider(scrapy.Spider):
 		self.is_last_sell=False
 		self.is_updated=False
 		urls = [
-		'http://www.muabannhadat.vn/nha-ban-3513',
-		'http://www.muabannhadat.vn/nha-cho-thue-3518'
+		'http://www.muabannhadat.vn/nha-dat-3490',
+		'http://www.muabannhadat.vn/nha-cho-thue-3518',
+
 		]
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
@@ -104,7 +105,7 @@ class MuabannhadatSpider(scrapy.Spider):
 		area = area.replace(" m2","")
 		
 		# Get the post id
-		id = response.url.rsplit('-',1)[1]
+		post_id = response.url.rsplit('-',1)[1]
 
 		# Get the post title
 		title = response.xpath("//h1[contains(@class, 'navi-title')]//text()").extract_first()
@@ -117,20 +118,25 @@ class MuabannhadatSpider(scrapy.Spider):
 		date_post = datetime.datetime.strptime(date_post,"%d-%m-%Y")
 		weekday = date_post.weekday()
 		if date_post < self.last_post_time:
-			if self.transaction_type == 'cho thue':
-				self.is_last_rent = True
-			else:
-				self.is_last_sell = True
 			return
 
-		# Get city 
-		city = self.convert_unicode(response.xpath("//span[contains(@id,'City')]/a/text()").extract_first())
+		# Get province 
+		province = self.convert_unicode(response.xpath("//span[contains(@id,'City')]/a/text()").extract_first())
 		
-		# Get district 
-		district = self.convert_unicode(response.xpath("//span[contains(@id,'District')]/a/text()").extract_first())
+		# Get county 
+		county = self.convert_unicode(response.xpath("//span[contains(@id,'District')]/a/text()").extract_first())
 
 		# Get ward
 		ward = self.convert_unicode(response.xpath("//span[contains(@id,'Ward')]/a/text()").extract_first())
+
+		# Get road
+		road = self.convert_unicode(response.xpath("//span[contains(@id,'Street')]/text()").extract_first())
+
+		# Get location detail
+		location_detail = road + "," + ward + "," + county + "," + province
+		
+		# Get road
+		road = self.convert_unicode(response.xpath("//span[contains(@id,'Street')]/text()").extract_first())
 
 		# Get author name
 		contact_name = response.xpath("//div[contains(@class,'name-contact')]/span")
@@ -146,16 +152,29 @@ class MuabannhadatSpider(scrapy.Spider):
 		type_list = response.xpath("//p[contains(@class,'cusp')]")
 		house_type = type_list[1].xpath("//p[contains(@class,'cusp')]//text()").extract_first()
 
+		# Get bedcount
+		bedcount = response.xpath("//span[contains(@id,'BedRoom')]/text()").extract_first()
+		if bedcount == None:
+			bedcount = ""
+
+		# Get project
+		project = response.xpath("//span[contains(@id,'Project')]/text()").extract_first()
+		if project == None:
+			project = ""
+
 		yield {
-			'post-id': id,
+			'post-id': post_id,
 			'website': "muabannhadat.vn",
 			'author': author,
 			'post-time': {'date': date_post.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
-			'location': {'city': city,'district': district, 'ward':ward},
+			'location': {'province': province,'county': county, 'ward':ward, 'road':road, 'detailed': location_detail},
 			'area':area,
 			'price':price,
 			'transaction-type': self.transaction_type,
 			'description': desciption,
-			'house-type': house_type
+			'house-type': house_type,
+			'project': project,
+			'bedcount': bedcount
+
 		}
