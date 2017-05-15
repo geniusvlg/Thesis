@@ -9,10 +9,6 @@ from scrapy.selector import Selector
 
 class AlonhadatSpider(scrapy.Spider):
 	name = 'alonhadat'
-	area = ''
-	last_post_time = ''
-	is_updated = ''
-	next_url = ''
 
 	def start_requests(self):		
 		self.is_updated = False 
