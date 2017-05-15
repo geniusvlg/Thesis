@@ -37,7 +37,6 @@ class ProcessData:
 					byRoad[item['house-type']]=[]
 				container=byRoad[item['house-type']]
 
-
 				container.append(item)
 			self.remove_duplication()
 			self.printOutput(filename)

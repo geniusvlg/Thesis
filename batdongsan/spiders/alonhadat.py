@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import scrapy
 import re
 import unicodedata
@@ -10,14 +11,11 @@ class AlonhadatSpider(scrapy.Spider):
 	name = 'alonhadat'
 	area = ''
 	last_post_time = ''
-	is_last_sell = ''
-	is_last_rent = ''
 	is_updated = ''
 	next_url = ''
+
 	def start_requests(self):		
 		self.is_updated = False 
-		self.is_last_sell = False
-		self.is_last_rent = False
 		urls = [
 		'http://alonhadat.com.vn/nha-dat/can-ban.html',
 		'http://alonhadat.com.vn/nha-dat/cho-thue.html'
@@ -41,82 +39,97 @@ class AlonhadatSpider(scrapy.Spider):
 	def convert_price(self, price):
 		list_price = price.split()
 		if price.find('/') != -1:
-			real_price = int(list_price[0]) * 1000000 * int(self.area)
+			real_price = float(list_price[0].replace(",",".")) * 1000000 * int(self.area)
 			return real_price
 		if list_price[1] == 'trieu':
-			real_price = int(list_price[0]) * 1000000
+			real_price = float(list_price[0].replace(",",".")) * 1000000
 		else:
 			real_price = float(list_price[0].replace(",",".")) * 1000000000
 		return real_price
 
 
 	def parse(self, response):
+		print('Response URL: ' + response.url)
 		# Get all items
 		items = response.xpath(".//div[@class= 'content-item']/div/div[@class='ct_title']/a/@href")
-		self.next_url = response.url.rpartition("--")[0] + '--'
 		if response.url.find('trang') == -1 and self.is_updated == False: # Process the first page
 			print ("Process First Page")
-			self.next_url = response.url.replace(".html","/trang--")
 			self.is_updated = True
-			print ("Start to open json file")
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				self.last_post_time=''
-				if "alonhadat.com.vn" in data:
-					self.last_post_time = datetime.datetime.strptime(data["alonhadat.com.vn"],"%d-%m-%Y %H:%M")
-					data["alonhadat.com.vn"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
+				if "alonhadat" in data:
+					self.last_post_time = datetime.datetime.strptime(data["alonhadat"],"%d-%m-%Y %H:%M")
+					data["alonhadat"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
 			
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
-		for item in items:
-			print ("Process each item")
-			print (item.extract())
-			if(re.search('cho-thue', response.url)!=None):
-				if self.is_last_rent == True:
-					return
-			else:
-				if self.is_last_rent == True:
-					return
 
+		if response.url.find('trang') == -1:	# First page
+			self.next_url = response.url.replace(".html","/trang--")
+		else:
+			self.next_url = response.url.rpartition("--")[0] + '--'
+
+		for item in items:
 			item_url = "http://alonhadat.com.vn" + item.extract()
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
-
 		# Go to next page
-		print("Next url 2: " + self.next_url)
 		next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract()
 		if len(next_pages) == 1:	# Ony one 'nofollow'
 			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract_first()
 		else:	#  All pages are 'nofollow'
-			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href")[len(next_pages)].extract()
+			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href")[len(next_pages)-1].extract()
 		next_pages_index = int(next_pages.partition('--')[-1].rpartition('.html')[0])
 		current_index = int(response.xpath("//a[@class='active']/text()").extract_first())
 		if current_index < next_pages_index:
 			current_index = current_index + 1
 			next_page_url = self.next_url + str(current_index) + ".html"
+			print("Next Page Url: " + next_page_url)
 			yield scrapy.Request(next_page_url,callback=self.parse)
 		elif current_index == next_pages_index:
 			next_page_url = self.next_url + str(next_pages_index) + ".html"
+			print("Next Page Url: " + next_page_url)
 			yield scrapy.Request(next_page_url,callback=self.parse)
+
 
 	def parse_item(self, response):
 		# Get area
 		self.area = response.xpath("//span[@class='square']/span[@class='value']/text()").extract_first()
 		self.area = self.area.strip().replace(" m","")
+		self.area = self.area.strip().replace(".","")
+
 
 		# Get price
 		price = response.xpath("//span[@class='price']/span[@class='value']/text()").extract_first()
 		price = self.convert_unicode(price)
+		if price.find("thuan") !=-1:
+			return
 		price = self.convert_price(price)
-		# Get post id
-		post_id = response.xpath(".//tr/td/text()")[1].extract()
 
 		# Get property type
-		property_type = self.convert_unicode(response.xpath(".//tr/td/text()")[13].extract())
+		house_type = self.convert_unicode(response.xpath(u"//td[contains(text(),'Loại BDS')]/following-sibling::td").extract_first())
+		house_type = house_type.replace("<td>","")
+		house_type = house_type.replace("</td>","")
 
-		# Get transaction type
-		transaction_type = self.convert_unicode(response.xpath(".//tr/td/text()")[7].extract())
+		# Get project
+		project = response.xpath("//span[@class='project']//text()").extract_first()
+		if project == None:
+			project = ""
+
+		# Get transaction_type
+		transaction_type = self.convert_unicode(response.xpath(u"//td[contains(text(),'Loại tin')]/following-sibling::td").extract_first())
+		if transaction_type == "---":
+			transaction_type = ""
+
+		#Get bedcount
+		bedcount = response.xpath(u"//td[contains(text(),'Số phòng ngủ')]/following-sibling::td").extract_first()
+		if bedcount == "---":
+			bedcount = ""
+
+		# Get post id
+		post_id = response.xpath(u"//td[contains(text(),'Mã tin')]/following-sibling::td").extract_first()
 
 		# Get post time
 		post_date = response.xpath("//span[@class='date']/text()").extract_first()
@@ -128,47 +141,80 @@ class AlonhadatSpider(scrapy.Spider):
 		else:
 			post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y") #
 		weekday = post_date.weekday()
-		print ("Post date:", post_date)
-		print ("Last post time:", self.last_post_time)
 		if post_date<self.last_post_time:
 			print(post_date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
-			if transaction_type=='Can ban':
-				self.is_last_sell=True
-			else:
-				self.is_last_rent=True
 			return
 	
 		# Get title
-		title = self.convert_unicde(response.xpath('//div[@class="title"]/h1/text()').extract_first())
+		title = self.convert_unicode(response.xpath('//div[@class="title"]/h1/text()').extract_first())
 
 		# Get location
-		location = response.xpath("//div[@class='add']/span[@class='value']/text()").extract_first()
+		location = response.xpath("//div[@class='address']/span[@class='value']/text()").extract_first()
 		location = self.convert_unicode(location)
+		location_detail = location
+		location_list = location.split(',')
 
-		# Get city (province)
-		list_location = location.split(',')
-		city = list_location[3]
+		# Get description
+		description = response.xpath("//div[contains(@class,'detail')]//text()").extract()
+		description = '-'.join(description)
+		description = self.convert_unicode(description)
 
-		# Get district (ward)
-		ward = list_location[2]
+		if len(location_list) > 3:
+			# Get road
+			road = location_list[0]
+
+			# Get ward
+			ward = location_list[1]
+
+			# Get county
+			county = location_list[2]
+
+			# Get province
+			province = location_list[3]
+
+		elif len(location_list) > 2:
+			road = ''
+
+			# Get ward
+			ward = location_list[0]
+
+			# Get county
+			county = location_list[1]
+
+			# Get province
+			province = location_list[2]
+
+		else:
+			road = ""
+			ward = ""
+
+			# Get county
+			county = location_list[0]
+
+			# Get province
+			province = location_list[1]
+
+
 
 		# Get author name
 		author = response.xpath("//span[@class='name']/span[@class='value']/text()").extract_first()
-
-		# Get author phone
-		phone = response.xpath("//span[@class='phone']/span[@class='value']/text()").extract_first()
+		if author == None:
+			author = ""
 
 		yield {
 			'post-id': post_id,
 			'website': "alonhadat.com.vn",
-			'author': {'name': author , 'phone': phone},
+			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
-			'location': {'city': city, 'ward': ward, 'detail': location},
-			'area':area,
+			'location': {'province': province, 'county': county, 'road':road, 'ward': ward, 'detailed': location_detail},
+			'area':self.area,
 			'price':price,
 			'transaction-type': transaction_type,
-			'property-type': property_type
+			'house-type': house_type,
+			'description': description,
+			'project': project,
+			'bedcount': bedcount
 		}
 
 

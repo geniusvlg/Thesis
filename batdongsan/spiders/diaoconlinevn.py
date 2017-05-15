@@ -1,3 +1,4 @@
+
 import scrapy
 import re
 import unicodedata
@@ -15,12 +16,14 @@ class QuotesSpider(scrapy.Spider):
 	is_updated=''
 
 	def start_requests(self):
+		print ("GO HERE")
 		is_last=False
 		urls = [
-		'http://alonhadat.com.vn/nha-dat/can-ban.html'
+		'http://diaoconline.vn/sieu-thi/loc/?tindang=1',
+		'http://diaoconline.vn/sieu-thi/loc/?tindang=2'
 		]
 		for url in urls:
-			yield SplashRequest(url, self.parse, endpoint='render.html',args={'wait': 0.5},)
+			yield scrapy.Request(url=url,callback=self.parse)
 
 	def convert_unicode(self,text):
 		if text=='':
@@ -46,6 +49,7 @@ class QuotesSpider(scrapy.Spider):
 		return real_price
 
 	def parse(self, response, index):
+		print (" START TO PARSE")
 
 		# Get all posts
 		items = response.xpath(".//div[contains(@class, rounded_style_2)]")
@@ -79,9 +83,10 @@ class QuotesSpider(scrapy.Spider):
 
 		# Go to next page
 		next_href = response.xpath("//a[contains(@rel, 'next')]/@href").extract_first()
+		print ('NEXT PAGE URL: ' + next_href)
 		if next_href == None:
 			next_href = "http://http://diaoconline.vn" + next_href;
-			yield SplashRequest(next_href, self.parse, endpoint='render.html',args={'wait': 0.5},)
+			yield SplashRequest(next_href, callback=self.parse)
 
 	def	parse_item(self, response):
 		# Get price of property
