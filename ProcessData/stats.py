@@ -62,28 +62,32 @@ def main(type):
 					by_province=data[province]
 					for county in by_province:
 						by_county=by_province[county]
-						for house_type in by_county:
-							by_house=by_county[house_type]
-							for item in by_house:
-								total+=1
-								date=datetime.datetime.strptime(item['post-time']['date'],'%d-%m-%Y')
-								year=date.year
-								noa=False
-								nop=False
-								if not is_number(str(item['area']).split('m')[0].replace(',','.')):
-									nonareacount+=1
-									noa=True
-								if not is_number(str(item['price']).replace(',','.')):
-									nonpricecount+=1
-									nop=True
-								if noa or nop:
-									noboth+=1
-								if year not in years:
+						for ward in by_county:
+							by_ward=by_county[ward]
+							for road in by_ward:
+								by_road=by_ward[road]
+								for house_type in by_county:
+									by_house=by_county[house_type]
+									for item in by_house:
+										total+=1
+										date=datetime.datetime.strptime(item['post-time']['date'],'%d-%m-%Y')
+										year=date.year
+										noa=False
+										nop=False
+										if not is_number(str(item['area']).split('m')[0].replace(',','.')):
+											nonareacount+=1
+											noa=True
+										if not is_number(str(item['price']).replace(',','.')):
+											nonpricecount+=1
+											nop=True
+										if noa or nop:
+											noboth+=1
+										if year not in years:
 
-									years.append(year)
-									count.append(1)
-								else:
-									count[years.index(year)]+=1
+											years.append(year)
+											count.append(1)
+										else:
+											count[years.index(year)]+=1
 				print("Year")
 				print (filename)
 				print(years)

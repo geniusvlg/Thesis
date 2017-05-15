@@ -100,7 +100,7 @@ class Nhadat123Spider(scrapy.Spider):
             transaction_type="Can ban"
 
         details=response.xpath(".//div[@class='detail_khungxam']")
-
+        print (details)
         description=self.convert_unicode(" ".join(details[0].xpath("./p//text()").extract()))
 
         post_id= response.url.split('/')[3].split('-')[1][1:]
@@ -116,6 +116,8 @@ class Nhadat123Spider(scrapy.Spider):
         province=location[2][1:]
 
         location_detail= self.convert_unicode("".join(response.xpath(".//div[@class='detail_khungxam']")[1].xpath(".//div")[1].xpath(".//text()").extract()))
+        location_detail=location_detail.split(':')[1].strip()
+
         if re.search('Thuoc du an',location_detail):
             location_detail=location_detail[:re.search('Thuoc du an',location_detail).start()]
         if county.split(" ")[1].isdigit()==False:
@@ -125,7 +127,7 @@ class Nhadat123Spider(scrapy.Spider):
 
         road=self.convert_unicode(response.xpath('//select[@id="cboStreetR"]/option[@selected]/text()').extract_first())
         ward=self.convert_unicode(response.xpath('//select[@id="cboWardR"]/option[@selected]/text()').extract_first())
-        project=self.convert_unicode(response.xpath('//select[@id="cboWardR"]/option[@selected]/text()').extract_first())
+        project=self.convert_unicode(response.xpath('//select[@id="cboProjR"]/option[@selected]/text()').extract_first())
         project=project if project!=None else ''
         bed_count=''
         bed_detail=response.xpath('//ul[@class="thongsonha"]/li[contains(text(),"phòng ngủ")]/text()').extract_first()
@@ -168,19 +170,22 @@ class Nhadat123Spider(scrapy.Spider):
     def parse(self,response):
         is_last= False
         print(response.url)
-
+       
         items=response.xpath(".//div[contains(@class,'box_nhadatban') and not(contains(@class,'box_R'))]")
-        if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and self.is_updated==False:
+        if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and self.is_updated==False and "last_post_time" not in self.state.keys():
             self.is_updated=True
             with open('last_post_id.json','r+') as f:
                 data=json.load(f)
                 self.last_post_time=''
                 if "123nhadat" in data:
                     self.last_post_time=datetime.datetime.strptime(data["123nhadat"],"%d-%m-%Y %H:%M")
+                    self.state['last_post_time']=self.last_post_time
                 data["123nhadat"]=(datetime.datetime.now()-datetime.timedelta(minutes=5)).strftime("%d-%m-%Y %H:%M")
             os.remove('last_post_id.json')
             with open('last_post_id.json','w') as f:
                 json.dump(data,f,indent = 4)
+        if self.last_post_time=='':
+            self.last_post_time=self.state["last_post_time"]
         for item in items:
             post_id=self.convert_unicode(item.xpath("./div/div/span/text()").extract_first().split(' ')[1])
             post_time_text=self.convert_unicode(item.xpath("./div/div/div/ul/li/span/span/text()").extract_first())

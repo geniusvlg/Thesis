@@ -7,6 +7,14 @@ import os
 from scrapy.selector import Selector
 from scrapy.http import HtmlResponse
 
+def is_number(text):
+	try:
+		float(text)
+		return True
+	except ValueError:
+		return False
+
+
 class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
@@ -14,6 +22,7 @@ class BatdongsanSpider(scrapy.Spider):
 	baseUrl=''
 	def start_requests(self):
 		self.baseUrl="http://batdongsan.com.vn"
+		self.state['baseUrl']=self.baseUrl
 		self.is_updated=False
 		urls = [
 			"http://batdongsan.com.vn/nha-dat-cho-thue",
@@ -42,6 +51,8 @@ class BatdongsanSpider(scrapy.Spider):
 					real_price+=(base)*1000000000
 			if 'm2' in unit:
 				a=area.split('m')
+				if not is_number(a[0]):
+					return text
 				real_price*=float(a[0])
 			return real_price
 	def convert_unicode(self,text):
@@ -66,6 +77,8 @@ class BatdongsanSpider(scrapy.Spider):
 			return self.convert_unicode(item.xpath('./text()').extract_first())
 
 	def parse(self,response):
+		if 'baseUrl' in self.state.keys():
+			self.baseUrl='http://batdongsan.com.vn'
 		response=HtmlResponse(url=response.url,body=response.body)
 		zones=response.xpath("//div[@id='divCountByAreas']")[0]
 		zones_href=zones.xpath('./ul/li/h3/a/@href').extract()
@@ -76,7 +89,8 @@ class BatdongsanSpider(scrapy.Spider):
 
 	def parse_province(self,response):
 		meta=response.meta
-
+		if 'baseUrl' in self.state.keys():
+			self.baseUrl='http://batdongsan.com.vn'
 		response=HtmlResponse(url=response.url,body=response.body)
 		zones=response.xpath("//div[@id='divCountByAreas']")[0]
 		zones_href=zones.xpath('./ul/li/h3/a/@href').extract()
@@ -88,20 +102,24 @@ class BatdongsanSpider(scrapy.Spider):
 
 
 	def parse_list(self,response):
+		if 'baseUrl' in self.state.keys():
+			self.baseUrl='http://batdongsan.com.vn'
 		meta=response.meta
 		
 		response=HtmlResponse(url=response.url,body=response.body)
 		already_crawl=False
 
 		url_length=len(response.url.split('/'))
-		if url_length==4 and self.is_updated==False: #first page
+		if (url_length==4 and self.is_updated==False and 'is_updated' not in self.state.keys()): #first page
 			self.is_updated=True
+			self.state['is_updated']=True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				self.last_post_time=''
 				self.last_post_time=datetime.datetime.strptime('01-01-2012 00:00',"%d-%m-%Y %H:%M")
 				if "batdongsan" in data:
 					self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
+					self.state['last_post_time']=self.last_post_time
 				data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
 				print(self.last_post_time)
 			os.remove('last_post_id.json')
@@ -115,6 +133,8 @@ class BatdongsanSpider(scrapy.Spider):
 		else:
 			is_last_page=True
 		items=response.xpath("//div[contains(@class,'search-productItem')]")
+		if self.last_post_time=='':
+			self.last_post_time=self.state['last_post_time']
 		for item in items:
 
 			url=item.xpath("./div[@class='p-title']/h3/a/@href").extract_first()
@@ -142,6 +162,8 @@ class BatdongsanSpider(scrapy.Spider):
 			yield scrapy.Request(url=next_page_url,meta={'province':meta['province'],'county':meta['county']},callback=self.parse_list)
 
 	def parseitem(self,response):
+		if 'baseUrl' in self.state.keys():
+			self.baseUrl='http://batdongsan.com.vn'
 		meta=response.meta
 		response=HtmlResponse(url=response.url,body=response.body)
 

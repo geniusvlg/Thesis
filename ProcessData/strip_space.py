@@ -10,14 +10,14 @@ def main():
 				ite=0
 				for line in f:
 					item = json.loads(line)
-					for att in item:
-						if type(item[att]) == type(''):
-							item[att]=str(item[att]).strip()
+					item["location"]["location-detail"]=item["location"]["location-detail"].split(':')[1].strip()
+					# for att in item:
+					# 	if type(item[att]) == type(''):
+					# 		item[att]=str(item[att]).strip()
 					outf.write(json.dumps(item))
 					outf.write('\n')
 					ite+=1
 					if ite%5000 == 0:
 						print("Process {}".format(ite))
-
 
 main()

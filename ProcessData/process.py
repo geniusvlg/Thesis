@@ -27,9 +27,17 @@ class ProcessData:
 				if byProvince.get(item['location']['county'])==None:
 					byProvince[item['location']['county']]={}
 				byCounty=byProvince[item['location']['county']]
-				if byCounty.get(item['house-type']['detailed'])==None:
-					byCounty[item['house-type']['detailed']]=[]
-				container=byCounty[item['house-type']['detailed']]
+				if byCounty.get(item['location']['ward'])==None:
+					byCounty[item['location']['ward']]=[]
+				byWard=byCounty[item['location']['ward']]
+				if byWard.get(item['location']['road'])==None:
+					byWard[item['location']['road']]=[]
+				byRoad=byWard[item['location']['road']]
+				if byRoad.get(item['house-type'])==None:
+					byRoad[item['house-type']]=[]
+				container=byRoad[item['house-type']]
+
+
 				container.append(item)
 			self.remove_duplication()
 			self.printOutput(filename)

@@ -6,3 +6,4 @@
 /ProcessData/process
 /ProcessData/*.jl
 /batdongsan/settings.py
+/crawls
