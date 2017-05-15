@@ -17,21 +17,21 @@ class QuotesSpider(scrapy.Spider):
 
 	def start_requests(self):
 		print ("GO HERE")
-		is_last=False
+		self.is_last=False
 		urls = [
 		'http://diaoconline.vn/sieu-thi/loc/?tindang=1',
 		'http://diaoconline.vn/sieu-thi/loc/?tindang=2'
 		]
+
 		for url in urls:
-			yield scrapy.Request(url=url,callback=self.parse)
+			yield SplashRequest(url, self.parse)
 
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(chr(272),'D',text);
-		text=re.sub(chr(273),'d',text);
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
-		text=text.decode()
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
@@ -48,34 +48,31 @@ class QuotesSpider(scrapy.Spider):
 				real_price = float(list_price[0])*1000000000
 		return real_price
 
-	def parse(self, response, index):
+	def parse(self, response):
 		print (" START TO PARSE")
+		t = response.xpath("//a[contains(@rel, 'next')]/@href")
+		print("Next Page: ") 
+		print(t)
 
 		# Get all posts
 		items = response.xpath(".//div[contains(@class, rounded_style_2)]")
 
 		# Process the first page
-		if response.url() == -1:
-			global last_post_time
+		if response.url.find("pi") == -1 and self.is_updated == False:
+			print ("Process First Page")
+			self.is_updated = True
 			with open('last_post_id.json', 'r+') as f:
 				data=json.load(f)
+				self.last_post_time = ''
 				if "diaoconline" in data:
-					last_post_time=datetime.datetime.strptime(data["diaoconline"],"%d-%m-%Y %H:%M")
-					data["diaoconline"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+					self.last_post_time = datetime.datetime.strptime(data["diaoconline"],"%d-%m-%Y %H:%M")
+					data["diaoconline"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
+
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
 					
 		for item in items:
-			post_time = self.convert_unicode(item.xpath("//span[@class='post_type']/text()").extract_first())
-			if('truoc' in post_time):
-				date=datetime.datetime.now()
-			else:
-				date=datetime.datetime.strptime(date,"%d-%m-%Y")
-			if date < last_post_time:
-				print(date,last_post_time)
-				return
-			
 			# Get URL of each item
 			item_url = item.xpath(".//div[contains(@class, 'info margin_left')]/h2/a/@href").extract_first()
 			item_url =  "http://diaoconline.vn" + item_url
@@ -89,6 +86,16 @@ class QuotesSpider(scrapy.Spider):
 			yield SplashRequest(next_href, callback=self.parse)
 
 	def	parse_item(self, response):
+		# Get post time
+		post_time = self.convert_unicode(item.xpath("//span[@class='post_type']/text()").extract_first())
+		if('truoc' in post_time):
+			post_time=datetime.datetime.now()
+		else:
+			date=datetime.datetime.strptime(date,"%d-%m-%Y")
+		if post_time < self.last_post_time:
+			print(post_time.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
+			return
+
 		# Get price of property
 		price = response.xpath("//div[contains(@class, 'money')]/text()").extract_first()
 		price = price.strip()
