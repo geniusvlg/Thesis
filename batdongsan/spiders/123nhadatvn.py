@@ -101,7 +101,6 @@ class Nhadat123Spider(scrapy.Spider):
             transaction_type="Can ban"
 
         details=response.xpath(".//div[@class='detail_khungxam']")
-        print (details)
         description=self.convert_unicode(" ".join(details[0].xpath("./p//text()").extract()))
 
         post_id= response.url.split('/')[3].split('-')[1][1:]

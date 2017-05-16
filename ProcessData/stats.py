@@ -58,6 +58,7 @@ def main(type):
 				noboth=0
 				data=json.load(f)
 				total=0
+				
 				for province in data:
 					by_province=data[province]
 					for county in by_province:
@@ -66,8 +67,8 @@ def main(type):
 							by_ward=by_county[ward]
 							for road in by_ward:
 								by_road=by_ward[road]
-								for house_type in by_county:
-									by_house=by_county[house_type]
+								for house_type in by_road:
+									by_house=by_road[house_type]
 									for item in by_house:
 										total+=1
 										date=datetime.datetime.strptime(item['post-time']['date'],'%d-%m-%Y')
