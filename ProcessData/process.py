@@ -9,14 +9,15 @@ class ProcessData:
 	data={}
 	def openFile(self):
 		for filename in os.listdir(self.path):
-			self.readFile(filename)
 			print(filename)
 			self.data={}
 
 	def readFile(self,filename):
+		print("READ FILE")
 		with open(self.path+'/'+filename,'r') as f:
 			ite=0
 			for line in f:
+				print ("line")
 				if ite%500==0:
 					print('Processing item {}'.format(ite+1))
 				ite+=1
@@ -47,7 +48,7 @@ class ProcessData:
 	def printOutput(self,filename):
 		with open('./processed/'+filename[:-2]+'output.json','w') as f:
 			print(len(self.data))
-			json.dump(self.data,f,indent=4,separators=(',',': '),sort_keys=True)
+			json.(self.data,f,indent=4,separators=(',',': '),sort_keys=True)
 
 	def remove_duplication(self):
 		allcount=0
