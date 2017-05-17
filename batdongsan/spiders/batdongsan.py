@@ -21,8 +21,8 @@ def is_number(text):
 class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
-	download_delay=1
 	is_updated=False
+	download_delay=2
 	baseUrl=''
 	def start_requests(self):
 		self.baseUrl="http://batdongsan.com.vn"
