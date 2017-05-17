@@ -1,4 +1,10 @@
 import json
+import itertools
+import os
+import numpy as np
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+
 
 
 def is_number(text):
@@ -8,55 +14,81 @@ def is_number(text):
 		except ValueError:
 			return False
 
+def draw_histo(array):
+	plt.hist(array,bins=range(0,1000,10))
+	plt.title("Count in leaf node")
+	plt.xlabel("Count")
+	plt.ylabel("Frequency")
+
+	fig = plt.gcf()
+	plt.show()
+
+
+def comp(item):
+	return int(item[1])
+
+
 class stats:
 	stats={}
-
+	count=[]
+	barecount=[]
+	path='./processed'
+	statpath='./stat'
 	def main(self):
-		with open('./batdongsan.output.json') as f:
-			storage=json.load(f)
-			for province in storage:
 
-				if province not in self.stats:
-					self.stats[province]={}
-				tprice2 = 0
-				count2=0
-				for county in storage[province]:
-					if county not in self.stats[province]:
-						self.stats[province][county]={}
-					tprice1=0
-					count1=0
-					for house_type in storage[province][county]:
-						tprice0=0
-						count0=0
-						for item in storage[province][county][house_type]:
-							if is_number(str(item['price'])):
-								if 'Khong xac dinh' not in item['area']:
-									area=item['area'].split('m')
-									if is_number(area[0]) and float(area[0])>0:
-										tprice0+=item['price']/float(area[0])
-										count0+=1
-						if count0>0:
-							self.stats[province][county][house_type]=float(tprice0/count0)
-							tprice1+=float(tprice0/count0)
-							count1+=1
-						else:
-							self.stats[province][county][house_type]=0
-						
-					if count1>0:
-						self.stats[province][county]['avg']=float(tprice1/count1)
-						tprice2+=float(tprice1/count1)
-						count2+=1
-					else:
-						self.stats[province][county]['avg']=0
-					
-				if count2>0:
-					self.stats[province]['avg']=float(tprice2/count2)
-				else:
-					self.stats[province]['avg']=0
-		with open('stats.txt','w') as of:
-			json.dump(self.stats,of,indent=4,separators=(',',': '),sort_keys=True)
+		for name in os.listdir(self.path):
+			with open(self.path+'/'+name) as f:
+				storage=json.load(f)
+				self.dict_mean(storage,self.stats)
+			with open(self.statpath+'/'+name.split('.')[0]+'stats.txt','w') as of:
+				json.dump(self.stats,of,indent=4,separators=(',',': '),sort_keys=True)
+
+	def dict_mean(self,value,container):
+		total=0
+		for k,v in value.items():
+			val=0
+			if isinstance(v,dict):
+				key=k
+				if k=='':
+					key='Other'
+				container[key]={}
+				val=self.dict_mean(v,container[key])
+			else:
+				total_price=0
+				for item in v:
+					if is_number(item['price']):
+						total_price+=item['price']
+				val=container[k]=total_price/len(v)
+			total+=val
+		container['mean']=total/len(value)
+		return total
+
+
+	def dict_print(self,value,before):
+		for k,v in value.items():
+			if isinstance(v,dict):
+				self.dict_print(v,k+', '+before)
+			else:
+				self.count.append((k+', '+before,len(v)))
+				self.barecount.append(len(v))
+	def get_leaf(self):
+		
+		for name in os.listdir(self.path):
+			with open(self.path+'/'+name) as f:
+				storage=json.load(f)
+				self.dict_print(storage,'')
+				self.count=sorted(self.count,key=lambda k: k[1],reverse=True)
+				with open(self.statpath+'/count'+name.split('.')[0]+'.txt','w') as of:
+					json.dump(self.count,of,indent=4,separators=(',',': '),sort_keys=True)
+				with open(self.statpath+'/bcount'+name.split('.')[0]+'.txt','w') as of:
+					json.dump(self.barecount,of,indent=4,separators=(',',': '),sort_keys=True)
+				draw_histo(self.barecount)
+
+
+
 
 
 if __name__ == '__main__':
 	stat= stats()
+	# stat.get_leaf()
 	stat.main()

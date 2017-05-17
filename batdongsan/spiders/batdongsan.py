@@ -6,6 +6,9 @@ import json
 import os
 from scrapy.selector import Selector
 from scrapy.http import HtmlResponse
+from scrapy_splash import SplashRequest
+import cfscrape
+
 
 def is_number(text):
 	try:
@@ -19,6 +22,7 @@ class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
 	is_updated=False
+	download_delay=2
 	baseUrl=''
 	def start_requests(self):
 		self.baseUrl="http://batdongsan.com.vn"
@@ -30,6 +34,7 @@ class BatdongsanSpider(scrapy.Spider):
 		]
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
+
 	def convert_price(self,text,area):
 		if(bool(re.search(r'\d',text))==False):
 			return text
@@ -77,15 +82,17 @@ class BatdongsanSpider(scrapy.Spider):
 			return self.convert_unicode(item.xpath('./text()').extract_first())
 
 	def parse(self,response):
+		print (response.request.headers)
 		if 'baseUrl' in self.state.keys():
 			self.baseUrl='http://batdongsan.com.vn'
 		response=HtmlResponse(url=response.url,body=response.body)
+
 		zones=response.xpath("//div[@id='divCountByAreas']")[0]
 		zones_href=zones.xpath('./ul/li/h3/a/@href').extract()
 		texts_zone=response.xpath("//div[@id='divCountByAreas']")[0]
 		texts=texts_zone.xpath("./ul/li/h3/a/text()").extract()
 		for index,href in enumerate(zones_href):
-			yield scrapy.Request(url=self.baseUrl+href,meta={'province':texts[index]},callback=self.parse_province)
+			yield SplashRequest(url=self.baseUrl+href,meta={'province':texts[index]},callback=self.parse_province)
 
 	def parse_province(self,response):
 		meta=response.meta
