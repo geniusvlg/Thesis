@@ -149,8 +149,9 @@ class MuabannhadatSpider(scrapy.Spider):
 			author = self.convert_unicode(contact_name)
 
 		# Get house-type
-		type_list = response.xpath("//p[contains(@class,'cusp')]")
-		house_type = type_list[1].xpath("//p[contains(@class,'cusp')]//text()").extract_first()
+		type_list = response.xpath("//p[contains(@itemprop,'title')]")
+		house_type = type_list[1].xpath("text()").extract_first()
+		house_type =self.convert_unicode(house_type)
 
 		# Get bedcount
 		bedcount = response.xpath("//span[contains(@id,'BedRoom')]/text()").extract_first()
@@ -161,6 +162,8 @@ class MuabannhadatSpider(scrapy.Spider):
 		project = response.xpath("//span[contains(@id,'Project')]/text()").extract_first()
 		if project == None:
 			project = ""
+		else:
+			project = self.convert_unicode(project)
 
 		yield {
 			'post-id': post_id,
