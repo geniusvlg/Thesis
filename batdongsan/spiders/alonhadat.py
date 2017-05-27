@@ -124,8 +124,6 @@ class AlonhadatSpider(scrapy.Spider):
 		transaction_type = transaction_type.replace("</td>","")
 		if transaction_type == "---":
 			transaction_type = ""
-		else:
-			transaction_type = self.convert_unicode(transaction_type)
 
 		#Get bedcount
 		bedcount = response.xpath(u"//td[contains(text(),'Số phòng ngủ')]/following-sibling::td").extract_first()

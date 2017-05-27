@@ -8,20 +8,15 @@ from scrapy.selector import Selector
 
 class MuabannhadatSpider(scrapy.Spider):
 	name = "muabannhadat"
+	download_delay = 1.5
 	last_post_time=''
-	is_last_rent = ''
-	is_last_sell = ''
 	is_updated = ''
 	transaction_type = ''
 
 	def start_requests(self):
-		self.is_last_rent=False
-		self.is_last_sell=False
 		self.is_updated=False
 		urls = [
-		'http://www.muabannhadat.vn/nha-dat-3490',
-		'http://www.muabannhadat.vn/nha-cho-thue-3518',
-
+		'http://www.muabannhadat.vn/nha-dat-3490'
 		]
 		for url in urls:
 			yield scrapy.Request(url=url,callback=self.parse)
@@ -69,12 +64,10 @@ class MuabannhadatSpider(scrapy.Spider):
 		for item in items:
 			if (re.search('cho-thue', response.url) != None):
 				self.transaction_type = 'cho thue'
-				if self.is_last_rent == True:
-					return
+			
 			else:
-				self.transaction_type = 'nha ban'
-				if self.is_last_sell == True:
-					return
+				self.transaction_type = 'can ban'
+				
 			item_url = "http://www.muabannhadat.vn" + item.extract()
 			yield scrapy.Request(item_url,callback=self.parse_item)
 
@@ -105,7 +98,7 @@ class MuabannhadatSpider(scrapy.Spider):
 		area = area.replace(" m2","")
 		
 		# Get the post id
-		post_id = response.url.rsplit('-',1)[1]
+		post_id = response.xpath("//span[contains(@id,'_lblId')]/text()").extract_first()
 
 		# Get the post title
 		title = response.xpath("//h1[contains(@class, 'navi-title')]//text()").extract_first()
@@ -152,6 +145,13 @@ class MuabannhadatSpider(scrapy.Spider):
 		type_list = response.xpath("//p[contains(@itemprop,'title')]")
 		house_type = type_list[1].xpath("text()").extract_first()
 		house_type =self.convert_unicode(house_type)
+		house_type = house_type.lower()
+
+
+		if house_type == "Khac":
+			sub_url = re.search('http://www.muabannhadat.vn/(.*)(-khac-)',url)
+			house_type = sub_url.group(1)
+		house_type = house_type.replace("-"," ")
 
 		# Get bedcount
 		bedcount = response.xpath("//span[contains(@id,'BedRoom')]/text()").extract_first()
