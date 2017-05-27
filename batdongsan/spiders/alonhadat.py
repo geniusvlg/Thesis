@@ -113,19 +113,29 @@ class AlonhadatSpider(scrapy.Spider):
 		project = response.xpath("//span[@class='project']//text()").extract_first()
 		if project == None:
 			project = ""
+		else:
+			project = self.convert_unicode(project)
+			project = project.replace("<td>","")
+			project = project.replace("</td>","")
 
 		# Get transaction_type
 		transaction_type = self.convert_unicode(response.xpath(u"//td[contains(text(),'Loại tin')]/following-sibling::td").extract_first())
+		transaction_type = transaction_type.replace("<td>","")
+		transaction_type = transaction_type.replace("</td>","")
 		if transaction_type == "---":
 			transaction_type = ""
 
 		#Get bedcount
 		bedcount = response.xpath(u"//td[contains(text(),'Số phòng ngủ')]/following-sibling::td").extract_first()
+		bedcount = bedcount.replace("<td>","")
+		bedcount = bedcount.replace("</td>","")
 		if bedcount == "---":
 			bedcount = ""
 
 		# Get post id
 		post_id = response.xpath(u"//td[contains(text(),'Mã tin')]/following-sibling::td").extract_first()
+		post_id = post_id.replace("<td>","")
+		post_id = post_id.replace("</td>","")
 
 		# Get post time
 		post_date = response.xpath("//span[@class='date']/text()").extract_first()
