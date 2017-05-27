@@ -10,13 +10,13 @@ class MongoWrite:
 		self.read_json()
 		self.write_json()
 	def read_json(self):
-		with open('./processed/123nhadat.output.json') as f:
+		with open('./processed/batdongsan.output.json') as f:
 			data=json.load(f)
 			self.read_leaf(data)
 
 	def write_json(self):
 		db=self.mongo['realestate']
-		coll=db['item']
+		coll=db['houses']
 		for item in self.data:
 			result=coll.insert_one(item)
 

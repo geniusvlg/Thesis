@@ -23,10 +23,10 @@ class Nhadat24hSpider(scrapy.Spider):
 			"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
 			"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
 		]
+		token, agent = cfscrape.get_tokens("http://nhadat24h.net")
+		self.token=token
+		self.agent=agent
 		for url in urls:
-			token, agent = cfscrape.get_tokens(url)
-			self.token=token
-			self.agent=agent
 			yield scrapy.Request(url=url,callback=self.parse,
 				cookies=token,
 				headers={'User-Agent':agent})
@@ -41,6 +41,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
+		text=text.strip()
 		return text
 
 	def convert_time(self,text):
@@ -102,6 +103,11 @@ class Nhadat24hSpider(scrapy.Spider):
 		author = response.xpath(".//div[contains(@class,'dv-cont-dt')]/div/label/a/@href").extract_first().strip(".html").strip("/")
 		county= self.convert_unicode(property_details[6].xpath(".//td/label/a/text()").extract_first())
 		province= self.convert_unicode(property_details[3].xpath(".//td/label/text()").extract_first())
+		location_detail=property_details[7].xpath(".//td/label/h2/a/text()").extract_first()
+		if location_detail != None:
+			location_detail = self.convert_unicode(location_detail) + ", " + county + ", " + province
+		else:
+			location_detail=county + ', ' + province
 		if re.search("HCM",province)!=None:
 			province="HCM"
 		price= self.convert_unicode(property_details[0].xpath(".//td/label/strong/text()").extract_first())

@@ -90,5 +90,5 @@ class stats:
 
 if __name__ == '__main__':
 	stat= stats()
-	# stat.get_leaf()
-	stat.main()
+	stat.get_leaf()
+	# stat.main()

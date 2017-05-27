@@ -42,6 +42,7 @@ class Nhadat123Spider(scrapy.Spider):
         text = text.replace('\n', '')
         text = text.replace('\t', '')
         text = text.replace('\r', '')
+        text = text.strip()
         return text
     def convert_price(self,text,area):
         if(bool(re.search(r'\d',text))==False):
@@ -93,12 +94,14 @@ class Nhadat123Spider(scrapy.Spider):
         url_title= self.convert_unicode(response.xpath(".//ul[@class='info_no2']/li/span/a/text()").extract_first())
         house_type=""
         transaction_type=""
+        house_type=self.convert_unicode(response.xpath('//select[@id="cboTypeReR"]/option[@selected]/text()').extract_first())
         if(re.search("Cho thue",url_title)!= None):
-            house_type=url_title[url_title.find("Cho thue")+9:url_title.find("tai")-1]
+            house_type=house_type[9:]
             transaction_type="Cho thue"
         elif re.search("Ban",url_title)!= None:
-            house_type=url_title[url_title.find("Ban")+4:url_title.find("tai")-1]
-            transaction_type="Can ban"
+            house_type=house_type[4:]
+            transaction_type="Ban"
+            
 
         details=response.xpath(".//div[@class='detail_khungxam']")
         description=self.convert_unicode(" ".join(details[0].xpath("./p//text()").extract()))
@@ -111,20 +114,14 @@ class Nhadat123Spider(scrapy.Spider):
 
         author=self.convert_unicode(response.xpath(".//div[@class='lienhe_nguoiban']/ul/li")[1].xpath("./b/text()").extract_first())
 
-        location=self.convert_unicode(response.xpath(".//ul[@class='info_no2']/li/span/text()").extract_first()).split("-")
-        county=location[1][1:len(location[1])-1]
-        province=location[2][1:]
-
         location_detail= self.convert_unicode("".join(response.xpath(".//div[@class='detail_khungxam']")[1].xpath(".//div")[1].xpath(".//text()").extract()))
         location_detail=location_detail.split(':')[1].strip()
 
         if re.search('Thuoc du an',location_detail):
             location_detail=location_detail[:re.search('Thuoc du an',location_detail).start()]
-        if county.split(" ")[1].isdigit()==False:
-            county=" ".join(county.split(" ")[1:len(county.split(" "))])
-        if province=="Ho Chi Minh":
-            province="HCM"
 
+        province=self.convert_unicode(response.xpath('//select[@id="cboCityR"]/option[@selected]/text()').extract_first())
+        county=self.convert_unicode(response.xpath('//select[@id="cboDistrictR"]/option[@selected]/text()').extract_first())
         road=self.convert_unicode(response.xpath('//select[@id="cboStreetR"]/option[@selected]/text()').extract_first())
         ward=self.convert_unicode(response.xpath('//select[@id="cboWardR"]/option[@selected]/text()').extract_first())
         project=self.convert_unicode(response.xpath('//select[@id="cboProjR"]/option[@selected]/text()').extract_first())
