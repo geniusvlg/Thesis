@@ -17,16 +17,25 @@ class StandardDeviation:
 	def readFile(self,filename):
 		with open(self.data_path + '/' + filename,'r+') as f:
 			data = json.load(f)
-			for province in data:
-				for county in data[province]:
-					for house_type in data[province][county]:
-						mean = self.calMean(data[province][county][house_type])
-						standard = self.calStd(data[province][county][house_type], mean)
-						for item in data[province][county][house_type]:
-							if item.get("price") < (mean - 3*standard) or item.get("price") > (mean + 3*standard):
-								data[province][county][house_type].remove(item)
+			for t_type in data:
+				by_type=data[t_type]
+				for province in by_type:
+					by_province=by_type[province]
+					for county in by_province:
+						print(county)
+						by_county=by_province[county]
+						for ward in by_county:
+							# if ward=='':
+							# 	continue
+							by_ward=by_county[ward]
+							for house_type in by_ward:
+								mean = self.calMean(by_ward[house_type])
+								standard = self.calStd(by_ward[house_type], mean)
+								for item in by_ward[house_type]:
+									if item.get("price") < (mean - 3*standard) or item.get("price") > (mean + 3*standard):
+										by_ward[house_type].remove(item)
 		with open(self.store_path + '/' + filename, 'w') as f:
-			json.dump(data,f)			
+			json.dump(data,f)
 			
 	def calMean(self,list):
 		total = 0

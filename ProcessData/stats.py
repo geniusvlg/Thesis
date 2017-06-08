@@ -12,7 +12,7 @@ def is_number(text):
 def main(type):
 	ret=[]
 	if type=='raw':
-		path='./data'
+		path='./middle'
 		for filename in os.listdir(path):
 			years=[]
 			count=[]
