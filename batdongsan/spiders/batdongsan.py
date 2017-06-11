@@ -21,6 +21,7 @@ def is_number(text):
 class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
+	download_delay=1.5
 	is_updated=False
 	download_delay=2
 	baseUrl=''
@@ -92,7 +93,7 @@ class BatdongsanSpider(scrapy.Spider):
 		texts_zone=response.xpath("//div[@id='divCountByAreas']")[0]
 		texts=texts_zone.xpath("./ul/li/h3/a/text()").extract()
 		for index,href in enumerate(zones_href):
-			yield SplashRequest(url=self.baseUrl+href,meta={'province':texts[index]},callback=self.parse_province)
+			yield scrapy.Request(url=self.baseUrl+href,meta={'province':texts[index]},callback=self.parse_province)
 
 	def parse_province(self,response):
 		meta=response.meta

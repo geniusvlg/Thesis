@@ -12,10 +12,6 @@ class Nhadat24hSpider(scrapy.Spider):
 	last_post_time=''
 	is_updated=''
 
-	start_urls=[
-		"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
-		"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
-	]
 
 	def start_requests(self):
 		self.is_updated=False
@@ -23,10 +19,10 @@ class Nhadat24hSpider(scrapy.Spider):
 			"http://nhadat24h.net/ban-bat-dong-san-viet-nam-nha-dat-viet-nam-s686599/",
 			"http://nhadat24h.net/cho-thue-nha-dat-bat-dong-san-tai-viet-nam-nha-dat-tai-viet-nam-s686588/"
 		]
+		token, agent = cfscrape.get_tokens("http://nhadat24h.net")
+		self.token=token
+		self.agent=agent
 		for url in urls:
-			token, agent = cfscrape.get_tokens(url)
-			self.token=token
-			self.agent=agent
 			yield scrapy.Request(url=url,callback=self.parse,
 				cookies=token,
 				headers={'User-Agent':agent})
@@ -41,6 +37,7 @@ class Nhadat24hSpider(scrapy.Spider):
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
+		text=text.strip()
 		return text
 
 	def convert_time(self,text):
@@ -102,6 +99,11 @@ class Nhadat24hSpider(scrapy.Spider):
 		author = response.xpath(".//div[contains(@class,'dv-cont-dt')]/div/label/a/@href").extract_first().strip(".html").strip("/")
 		county= self.convert_unicode(property_details[6].xpath(".//td/label/a/text()").extract_first())
 		province= self.convert_unicode(property_details[3].xpath(".//td/label/text()").extract_first())
+		location_detail=property_details[7].xpath(".//td/label/h2/a/text()").extract_first()
+		if location_detail != None:
+			location_detail = self.convert_unicode(location_detail) + ", " + county + ", " + province
+		else:
+			location_detail=county + ', ' + province
 		if re.search("HCM",province)!=None:
 			province="HCM"
 		price= self.convert_unicode(property_details[0].xpath(".//td/label/strong/text()").extract_first())
@@ -141,22 +143,26 @@ class Nhadat24hSpider(scrapy.Spider):
 		}
 
 	def parse(self, response):
+
 		is_last= False
 		is_old=False
 		items = response.xpath(".//div[contains(@class,'dv-item')]")
-		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and self.is_updated==False: #first page
+		if response.url.split("/")[len(response.url.split("/"))-1].isdigit() == False and self.is_updated==False and 'is_updated' not in self.state.keys(): #first page
 			self.is_updated=True
+			self.state['is_updated']=True
 			with open('last_post_id.json','r+') as f:
 				data=json.load(f)
 				self.last_post_time=''
 				if "nhadat24h" in data:
 					self.last_post_time=datetime.datetime.strptime(data["nhadat24h"],"%d-%m-%Y %H:%M")
+					self.state['last_post_time']=self.last_post_time
 				data["nhadat24h"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
 			os.remove('last_post_id.json')
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
 
-		
+		if self.last_post_time=='':
+			self.last_post_time=self.state['last_post_time']
 		for item in items:
 			post_url = item.xpath(".//div/h4/a/@href").extract_first()
 			post_id=post_url.split("-")[len(post_url.split("-"))-1]
