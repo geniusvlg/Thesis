@@ -200,6 +200,10 @@ class AlonhadatSpider(scrapy.Spider):
 			# Get province
 			province = location_list[1]
 
+		road = road.strip()
+		ward = ward.strip()
+		county = county.strip()
+		province = province.strip()
 
 
 		# Get author name
@@ -209,7 +213,7 @@ class AlonhadatSpider(scrapy.Spider):
 
 		yield {
 			'post-id': post_id,
-			'website': "alonhadat.com.vn",
+			'website': 'alonhadat.com.vn',
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,

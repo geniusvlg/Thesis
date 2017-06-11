@@ -2,8 +2,12 @@ import json
 import os
 import re
 
-class Alonhadat:
-	dat = {}
+class HouseTypeCnnversion:
+	data = {}
 	data_path = './data'
-	store_path = './middle'
-	
+
+	def openFile(self):
+		for filename in os.listdir(self.data_path):
+			self.convertHouseType(filename)
+
+	def convertHouseType
