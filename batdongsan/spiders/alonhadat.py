@@ -161,24 +161,29 @@ class AlonhadatSpider(scrapy.Spider):
 		description = self.convert_unicode(description)
 
 		# Get location
-		loca_list = response.xpath("//span[@itemprop='name']")
 		redundant_word = response.xpath("//span[@itemprop='name']/text()")[2].extract()
-		road = response.xpath("//span[@itemprop='name']/text()")[6].extract()
-		road = self.convert_unicode(road.replace(redundant_word, ""))
+		list = response.xpath("//span[@itemprop='name']")
+		if len(list) > 6:
+			road = response.xpath("//span[@itemprop='name']/text()")[6].extract()
+			road = self.convert_unicode(road.replace(redundant_word, ""))
+		else:
+			road = ""
 
 		ward = response.xpath("//span[@itemprop='name']/text()")[5].extract()
-		ward = self.convert_unicode(ward.repalce(redundant_word, ""))
+		ward = self.convert_unicode(ward.replace(redundant_word, ""))
 
 		county = response.xpath("//span[@itemprop='name']/text()")[4].extract()
-		county = self.convert_unicode(county.repalce(redundant_word, ""))
+		county = self.convert_unicode(county.replace(redundant_word, ""))
 
 		province = response.xpath("//span[@itemprop='name']/text()")[3].extract()
-		province = self.convert_unicode(province.repalce(redundant_word, ""))
+		province = self.convert_unicode(province.replace(redundant_word, ""))
 
 		road = road.strip()
 		ward = ward.strip()
 		county = county.strip()
 		province = province.strip()
+
+		location_detail = road + ", " + ward + ", " + county + ", " + province
 
 		# Get author name
 		author = response.xpath("//span[@class='name']/span[@class='value']/text()").extract_first()
