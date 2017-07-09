@@ -13,7 +13,7 @@ def is_number(text):
 class MongoWrite:
     data=[]
     def init(self):
-        self.mongo=MongoClient()
+        self.mongo=MongoClient("ds151232.mlab.com",51232)
         command= input("What do you want to write? ")
         self.read_json(command=='full')
         if command=='full':
@@ -22,12 +22,13 @@ class MongoWrite:
             self.write_time()
 
     def read_json(self,command):
-        with open('./processed/merge_output.json') as f:
+        with open('./processed/merge_output_fix.json') as f:
             data=json.load(f)
             self.read_leaf(data,command)
 
     def write_full(self):
         db=self.mongo['realestate']
+        db.authenticate('anvo','anvo')
         coll=db['houses']
         for item in self.data:
             del item['description']

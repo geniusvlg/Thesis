@@ -154,7 +154,7 @@ class BatdongsanSpider(scrapy.Spider):
 				already_crawl=True
 			else:
 				if len(url)>0:
-					yield scrapy.Request(url=(self.baseUrl+url),meta={'province':meta['province'],'county':meta['county']},callback=self.parseitem)
+					yield scrapy.Request(url=(self.baseUrl+url),meta={'province':meta['province'],'county':meta['county'],'post_date':post_date},callback=self.parseitem)
 		if is_last_page==False and already_crawl==False:
 
 			next_page_url=response.url.split("/")
@@ -207,10 +207,9 @@ class BatdongsanSpider(scrapy.Spider):
 		author=''
 		if len(author_line)>0:
 			author=self.convert_unicode(author_line[0].xpath('./text()').extract_first())
-		post_id = response.xpath("//div[@class='prd-more-info']/div/text()")[0].extract().strip()
+		post_id = response.url.split("/")[-1].split("-")[-1][2:]
 
-		post_date = response.xpath("//div[@class='prd-more-info']/div/text()")[2].extract().strip()
-		post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y")
+		post_date = meta['post_date']
 
 		county=self.convert_unicode(meta['county'])
 		province=self.convert_unicode(meta['province'])

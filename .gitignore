@@ -7,3 +7,8 @@
 /ProcessData/*.jl
 /batdongsan/settings.py
 /crawls
+ProcessData/remove_mzs.txt
+WebProcess/map.kml
+WebProcess/out.svg
+cralws/123nhadat-1/requests.seen
+cralws/123nhadat-1/requests.queue/p0

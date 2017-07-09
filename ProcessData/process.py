@@ -20,15 +20,21 @@ class ProcessData:
     data={}
 
     def process(self):
+        self.open_old_file()
         self.open_file()
         self.remove_duplication()
-        self.remove_by_modified_z_score()
+        self.remove_by_modified_z_score("price")
+        self.remove_by_modified_z_score("area")
         self.print_output()
 
     def open_file(self):
         for filename in os.listdir(self.path):
             print(filename)
             self.read_file(filename)
+
+    def open_old_file(self):
+        with open("./processed/merge_output.json",'r') as f:
+            self.data=json.load(f)
 
     def read_file(self,filename):
         print("READ FILE")
@@ -164,6 +170,7 @@ class ProcessData:
     def remove_duplication(self):
         allcount=0
         remove_c=0
+        vect=TfidfVectorizer(min_df=1)
         with open('test.txt','w') as f:
             for t_type in self.data:
                 by_type=self.data[t_type]
@@ -190,10 +197,17 @@ class ProcessData:
                                         desc_list.append(item['description'])
                                         item_list.append(item)
                                         count+=1
-                            vect=TfidfVectorizer(min_df=1)
+                            if "khac" in by_province:
+                                if house_type in by_province["khac"]:
+                                    for item in by_province["khac"][house_type]:
+                                        desc_list.append(item['description'])
+                                        item_list.append(item)
+                                        count+=1
+                            
                             if len(desc_list)>1:
                                 tfidf=vect.fit_transform(desc_list)
                                 matrix=(tfidf*tfidf.T).A
+
                                 query=[i for i in range(len(matrix))]
                                 del_list=[]
                                 while len(query)>1:
@@ -220,15 +234,21 @@ class ProcessData:
                                     del query[0]
                                 del_list.sort(reverse=True)
                                 mi=len(by_county[house_type])
+                                if "" in by_province:
+                                    mi2=len(by_county[house_type])+len(by_province[""][house_type])
+                                else:
+                                    mi2=mi
                                 for i in del_list:
-                                    if i <len(by_county[house_type]):
+                                    if i <mi:
                                         del by_county[house_type][i]
+                                    elif i< mi2:
+                                        del by_province[""][house_type][i-mi]
                                     else:
-                                        del by_county[""][house_type][i-mi]
+                                        del by_province["khac"][house_type][i-mi2]
                             allcount+=len(item_list)
         print(remove_c)
 
-    def remove_by_modified_z_score(self):
+    def remove_by_modified_z_score(self,field):
         count=0
         total=0
         of = open('remove_mzs.txt','w')
@@ -248,18 +268,16 @@ class ProcessData:
                     for house_type in by_county:
                         del_list=[]
                         total+=1
-                        array=[int(x['price']) for x in by_county[house_type]]
+                        array=[int(x[field]) for x in by_county[house_type]]
                         median = np.median(array)
                         median_absolute_deviation = np.median([np.abs(x - median) for x in array]) 
                         if median_absolute_deviation==0:
                             continue
                         for i, item in enumerate(by_county[house_type]):
-                            if np.abs(0.6745*(item['price']-median)/median_absolute_deviation)>5:
+                            if np.abs(0.6745*(item[field]-median)/median_absolute_deviation)>5:
                                 del_list.append(i)
                         del_list.sort(reverse=True)
                         for i in del_list:
-                            area=float(item['area'])
-                            of.write(str(by_county[house_type][i]['price'])+" "+str(by_county[house_type][i]['price']*area)+" "+ str(by_county[house_type][i]['price'])+" "+by_county[house_type][i]['house-type']+ " "+ by_county[house_type][i]['transaction-type']+" "+ str(median) + " "+ str(median_absolute_deviation)+'\n')
                             del by_county[house_type][i]
         of.close()
 

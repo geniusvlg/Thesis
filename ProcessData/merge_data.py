@@ -11,7 +11,7 @@ def is_number(text):
 
 class Fix():
     path='./data'
-    keywords = ['thanh pho', 'thi xa', 'quan', 'huyen', 'dao', "phuong", "huyen dao", 'xa', "tp.", "h.", "p.",'thi tran']
+    keywords = ['thanh pho', 'thi xa', 'quan', 'huyen', 'dao', "phuong", "huyen dao", 'xa', "tp.", "h.", "p.",'thi tran',"q.","x."]
 
     def merge_house_type(self):
         with open("house_type_conversion.json",'r') as f:
@@ -36,9 +36,9 @@ class Fix():
                                 item['transaction-type']='can ban'
                             json.dump(item,fo)
                             fo.write("\n");
-                        except Exception:
+                        except BaseException as e:
                             print(item)
-                            print(Exception)
+                            print("Exception",e)
     
     def merge_location(self,location,website):
         keywords=self.keywords
@@ -56,24 +56,46 @@ class Fix():
                 location[att]='Khac'
             location[att]=location[att].lower()
             location[att]=location[att].strip()
-            if att=='county' or att == 'ward':
-                for keyword in keywords:
-                    if location[att].find(keyword)==0:
-                        arr=location[att].split(" ")
+            for keyword in keywords:
+                arr=location[att].split(" ")
+                if location[att].find(keyword)==0 and att!='location-detail':
+                    
+                    if len(arr)>1:
                         if not is_number(arr[1]):
                             # p.Tan Thanh (nhadat24h.net)
-                            if keyword=='p.' or keyword == 'h.':
+                            if keyword=='p.' or keyword == 'h.' or keyword =="q." or keyword == "x." or keyword=="tp.":
+                                print(location[att])
                                 space= ' ' if website !='muabannhadat.vn' else ''
                                 location[att]=location[att].replace(keyword + space,'')
                             else:
                                 location[att]=location[att].replace(keyword+' ','')
-
-                        break
+                            break
+                if len(arr)==1:
+                    if is_number(arr[0]):
+                        if att=='county':
+                            location[att]="quan "+location[att]
+                        elif att=='ward':
+                            location[att]='phuong' + location[att]
         return location
 
+    def fix_object(self):
+        data={} 
+        with open("./processed/merge_output.json",'r') as f: 
+            data=json.load(f)
+        self.read_leaf(data)
+        with open('./processed/merge_output_fix.json','w') as of:
+            json.dump(data,of,indent=4)
 
-
+    def read_leaf(self,data):
+        del_list=[]
+        for k,v in data.items():
+            if isinstance(v,dict):
+                self.read_leaf(v)
+            else:
+                for item in v:
+                    item['location']=self.merge_location(item['location'],item['website'])
 
 if __name__=='__main__':
     main=Fix()
-    main.merge_house_type()
+    # main.merge_house_type()
+    main.fix_object()
