@@ -9,6 +9,7 @@ from scrapy.selector import Selector
 
 class AlonhadatSpider(scrapy.Spider):
 	name = 'alonhadat'
+	words = []
 
 	def start_requests(self):		
 		self.is_updated = False 
@@ -154,53 +155,35 @@ class AlonhadatSpider(scrapy.Spider):
 		# Get title
 		title = self.convert_unicode(response.xpath('//div[@class="title"]/h1/text()').extract_first())
 
-		# Get location
-		location = response.xpath("//div[@class='address']/span[@class='value']/text()").extract_first()
-		location = self.convert_unicode(location)
-		location_detail = location
-		location_list = location.split(',')
-
 		# Get description
 		description = response.xpath("//div[contains(@class,'detail')]//text()").extract()
 		description = '-'.join(description)
 		description = self.convert_unicode(description)
 
-		if len(location_list) > 3:
-			# Get road
-			road = location_list[0]
-
-			# Get ward
-			ward = location_list[1]
-
-			# Get county
-			county = location_list[2]
-
-			# Get province
-			province = location_list[3]
-
-		elif len(location_list) > 2:
-			road = ''
-
-			# Get ward
-			ward = location_list[0]
-
-			# Get county
-			county = location_list[1]
-
-			# Get province
-			province = location_list[2]
-
+		# Get location
+		redundant_word = response.xpath("//span[@itemprop='name']/text()")[2].extract()
+		list = response.xpath("//span[@itemprop='name']")
+		if len(list) > 6:
+			road = response.xpath("//span[@itemprop='name']/text()")[6].extract()
+			road = self.convert_unicode(road.replace(redundant_word, ""))
 		else:
 			road = ""
-			ward = ""
 
-			# Get county
-			county = location_list[0]
+		ward = response.xpath("//span[@itemprop='name']/text()")[5].extract()
+		ward = self.convert_unicode(ward.replace(redundant_word, ""))
 
-			# Get province
-			province = location_list[1]
+		county = response.xpath("//span[@itemprop='name']/text()")[4].extract()
+		county = self.convert_unicode(county.replace(redundant_word, ""))
 
+		province = response.xpath("//span[@itemprop='name']/text()")[3].extract()
+		province = self.convert_unicode(province.replace(redundant_word, ""))
 
+		road = road.strip()
+		ward = ward.strip()
+		county = county.strip()
+		province = province.strip()
+
+		location_detail = road + ", " + ward + ", " + county + ", " + province
 
 		# Get author name
 		author = response.xpath("//span[@class='name']/span[@class='value']/text()").extract_first()
@@ -209,7 +192,7 @@ class AlonhadatSpider(scrapy.Spider):
 
 		yield {
 			'post-id': post_id,
-			'website': "alonhadat.com.vn",
+			'website': 'alonhadat.com.vn',
 			'author': author,
 			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
