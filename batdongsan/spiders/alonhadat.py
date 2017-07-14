@@ -165,13 +165,18 @@ class AlonhadatSpider(scrapy.Spider):
 		list = response.xpath("//span[@itemprop='name']")
 		if len(list) > 6:
 			road = response.xpath("//span[@itemprop='name']/text()")[6].extract()
-			road = self.convert_unicode(road.replace(redundant_word, ""))
+			ward = response.xpath("//span[@itemprop='name']/text()")[5].extract()
+
+		elif len(list) > 5:
+			road = ""
+			ward = response.xpath("//span[@itemprop='name']/text()")[5].extract()
+
 		else:
 			road = ""
+			ward = ""
 
-		ward = response.xpath("//span[@itemprop='name']/text()")[5].extract()
+		road = self.convert_unicode(road.replace(redundant_word, ""))
 		ward = self.convert_unicode(ward.replace(redundant_word, ""))
-
 		county = response.xpath("//span[@itemprop='name']/text()")[4].extract()
 		county = self.convert_unicode(county.replace(redundant_word, ""))
 
