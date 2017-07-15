@@ -170,7 +170,7 @@ class Nhadat24hSpider(scrapy.Spider):
 
 			post_time = self.convert_unicode(item.xpath(".//p")[0].xpath(".//text()").extract_first())
 			post_date=self.convert_time(post_time)
-			if re.search("vip",item.xpath("./@class").extract_first())==None:
+			if items[0].xpath("./div/h4/a/@class").extract_first().find('VIP')==-1:
 				if post_date<self.last_post_time:
 					is_last=True
 					break

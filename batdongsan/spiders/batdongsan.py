@@ -23,12 +23,12 @@ class BatdongsanSpider(scrapy.Spider):
 	last_post_time=""
 	download_delay=1.5
 	is_updated=False
-	download_delay=2
 	baseUrl=''
 	def start_requests(self):
 		self.baseUrl="http://batdongsan.com.vn"
 		self.state['baseUrl']=self.baseUrl
 		self.is_updated=False
+		self.last_post_time=datetime.datetime.strptime("01-09-2016 00:00","%d-%m-%Y %H:%M")
 		urls = [
 			"http://batdongsan.com.vn/nha-dat-cho-thue",
 			"http://batdongsan.com.vn/nha-dat-ban"
@@ -150,7 +150,7 @@ class BatdongsanSpider(scrapy.Spider):
 			post_date=datetime.datetime.strptime(date_text,"%d/%m/%Y")
 			print(url)
 			print("="*100)
-			if post_date<self.last_post_time:
+			if post_date<self.last_post_time and item.xpath('./@class').extract_first().find('vip')==-1:
 				already_crawl=True
 			else:
 				if len(url)>0:
