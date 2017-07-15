@@ -53,7 +53,7 @@ class QuotesSpider(scrapy.Spider):
 
 		if items == []:
 			return
-
+		already_crawl=False
 		# Process the first page
 		if response.url.find("pi") == -1 and self.is_updated == False:
 			print ("Process First Page")
@@ -73,6 +73,14 @@ class QuotesSpider(scrapy.Spider):
 			# Get URL of each item
 			item_url = item.xpath("//div[@class='info margin_left']/h2/a/@href/text()")
 			item_url =  "http://diaoconline.vn" + item_url
+			post_time=self.convert_unicode(item.xpath(".//span[contains(@class,'post_type')]/text()").extract_first().split(": "))
+			if('truoc' in post_time):
+				post_time=datetime.datetime.now()
+			else:
+				date=datetime.datetime.strptime(date,"%d-%m-%Y")
+			if post_time < self.last_post_time:
+				already_crawl=True
+
 			print ("ITEM_URL: " )
 			print(item_url)
 			yield scrapy.Request(item_url,callback=self.parse_item)
