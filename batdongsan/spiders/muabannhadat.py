@@ -12,9 +12,11 @@ class MuabannhadatSpider(scrapy.Spider):
 	last_post_time=''
 	is_updated = ''
 	transaction_type = ''
-
+	
 	def start_requests(self):
+		self.already_crawled = False
 		self.is_updated=False
+		self.date_post=''
 		urls = [
 		'http://www.muabannhadat.vn/nha-dat-3490'
 		]
@@ -45,7 +47,7 @@ class MuabannhadatSpider(scrapy.Spider):
 
 	def parse(self, response):  
 		# Get all items from the page
-		items = response.xpath("//a[contains(@class,'title-filter-link')]/@href")
+		items = response.xpath("//div[contains(@id,'_divListingInformation_')]")
 
 		# We use is_updated here because we want the first page to be run only one time for both 2 links
 		if (response.url.find("p=")==-1) and self.is_updated==False: # Process the first page
@@ -68,16 +70,27 @@ class MuabannhadatSpider(scrapy.Spider):
 			
 			else:
 				self.transaction_type = 'can ban'
+
+			# Get date_post
+			self.date_post = item.xpath(".//div[@class= 'col-lg-4 lline hidden-xs']/text()").extract_first()
+			self.date_post = self.convert_unicode(self.date_post).replace('Ngay dang: ', '').replace(".","-").strip()
+			self.date_post = datetime.datetime.strptime(self.date_post ,"%d/%m/%Y")
 				
-			item_url = "http://www.muabannhadat.vn" + item.extract()
-			yield scrapy.Request(item_url,callback=self.parse_item)
+			item_url = "http://www.muabannhadat.vn" + item.xpath(".//a[@class='title-filter-link']/@href").extract_first()
+
+			print("DATE POST: ")
+			print(self.date_post)
+
+			if self.date_post < self.last_post_time:
+				self.already_crawled = True
+			else:
+				yield scrapy.Request(item_url,callback=self.parse_item)
 
 		# Go to the next page
 		next_page = response.xpath("//a[contains(@id,'_lnkNext')]/@href")
-		if next_page != []:
+		if next_page != [] and self.already_crawled == False:
 			next_page = response.xpath("//a[contains(@id,'_lnkNext')]/@href").extract_first()
 			next_page_address = "http://www.muabannhadat.vn" + next_page
-			print ('Next Page URL: ' + next_page_address)
 			yield scrapy.Request(next_page_address,callback=self.parse)
 
 	def parse_item(self, response):
@@ -106,14 +119,9 @@ class MuabannhadatSpider(scrapy.Spider):
 		title = self.convert_unicode(title)
 		title = title.strip()
 
-		# Get date post
-		date_post =  self.convert_unicode(response.xpath("//span[contains(@id,'DateCreated')]/text()").extract_first()).replace(".","-")
-
-		date_post = datetime.datetime.strptime(date_post,"%d-%m-%Y")
-		weekday = date_post.weekday()
-		if date_post < self.last_post_time:
-			return
-
+		# Get weekday
+		weekday = self.date_post.weekday()
+		
 		# Get province 
 		province = self.convert_unicode(response.xpath("//span[contains(@id,'City')]/a/text()").extract_first())
 		
@@ -170,7 +178,7 @@ class MuabannhadatSpider(scrapy.Spider):
 			'post-id': post_id,
 			'website': "muabannhadat.vn",
 			'author': author,
-			'post-time': {'date': date_post.strftime("%d-%m-%Y"),'weekday': weekday},
+			'post-time': {'date': self.date_post.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
 			'location': {'province': province,'county': county, 'ward':ward, 'road':road, 'detailed': location_detail},
 			'area':area,
