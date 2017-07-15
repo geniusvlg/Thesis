@@ -9,10 +9,12 @@ from scrapy.selector import Selector
 
 class AlonhadatSpider(scrapy.Spider):
 	name = 'alonhadat'
-	words = []
 
 	def start_requests(self):		
 		self.is_updated = False 
+		self.post_date = ''
+		self.already_crawl = False
+		self.test = "1"
 		urls = [
 		'http://alonhadat.com.vn/nha-dat/can-ban.html',
 		'http://alonhadat.com.vn/nha-dat/cho-thue.html'
@@ -44,11 +46,20 @@ class AlonhadatSpider(scrapy.Spider):
 			real_price = float(list_price[0].replace(",",".")) * 1000000000
 		return real_price
 
+	def convert_postDate(self, date):
+		if date == "Hom nay":
+			date=datetime.datetime.now()
+		elif date == "Hom qua":
+			date=datetime.datetime.now() - datetime.timedelta(1)
+		else:
+			date=datetime.datetime.strptime(date,"%d/%m/%Y") #
+		return date
 
 	def parse(self, response):
 		print('Response URL: ' + response.url)
 		# Get all items
-		items = response.xpath(".//div[@class= 'content-item']/div/div[@class='ct_title']/a/@href")
+		items = response.xpath(".//div[@class='content-item']")
+
 		if response.url.find('trang') == -1 and self.is_updated == False: # Process the first page
 			print ("Process First Page")
 			self.is_updated = True
@@ -63,14 +74,31 @@ class AlonhadatSpider(scrapy.Spider):
 			with open('last_post_id.json','w') as f:
 				json.dump(data,f,indent = 4)
 
+			# Get posting time of the first item
+			first_posting_time = response.xpath(".//div[@class='ct_date']/text()").extract_first()
+			first_posting_time = self.convert_unicode(first_posting_time)
+			first_posting_time = self.convert_postDate(first_posting_time)
+			if first_posting_time < self.last_post_time: # terminate crawler
+				return
+
 		if response.url.find('trang') == -1:	# First page
 			self.next_url = response.url.replace(".html","/trang--")
 		else:
 			self.next_url = response.url.rpartition("--")[0] + '--'
 
 		for item in items:
-			item_url = "http://alonhadat.com.vn" + item.extract()
-			yield scrapy.Request(item_url,callback=self.parse_item)
+			item_url = "http://alonhadat.com.vn" + item.xpath(".//div[@class='ct_title']//@href").extract_first()
+
+			# Get post_date of the item
+			self.post_date = item.xpath(".//div[@class='ct_date']//text()").extract_first()
+			self.post_date = self.convert_unicode(self.post_date)
+			self.post_date = self.convert_postDate(self.post_date)
+
+			if self.post_date < self.last_post_time:
+				self.already_crawl=True
+			else:
+				yield scrapy.Request(item_url,callback=self.parse_item)
+
 
 		# Go to next page
 		next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href").extract()
@@ -80,12 +108,12 @@ class AlonhadatSpider(scrapy.Spider):
 			next_pages = response.xpath("//div[@class='page']/a[@rel='nofollow']/@href")[len(next_pages)-1].extract()
 		next_pages_index = int(next_pages.partition('--')[-1].rpartition('.html')[0])
 		current_index = int(response.xpath("//a[@class='active']/text()").extract_first())
-		if current_index < next_pages_index:
+		if current_index < next_pages_index and self.already_crawl == False:
 			current_index = current_index + 1
 			next_page_url = self.next_url + str(current_index) + ".html"
 			print("Next Page Url: " + next_page_url)
 			yield scrapy.Request(next_page_url,callback=self.parse)
-		elif current_index == next_pages_index:
+		elif current_index == next_pages_index and self.already_crawl == False:
 			next_page_url = self.next_url + str(next_pages_index) + ".html"
 			print("Next Page Url: " + next_page_url)
 			yield scrapy.Request(next_page_url,callback=self.parse)
@@ -138,20 +166,8 @@ class AlonhadatSpider(scrapy.Spider):
 		post_id = post_id.replace("<td>","")
 		post_id = post_id.replace("</td>","")
 
-		# Get post time
-		post_date = response.xpath("//span[@class='date']/text()").extract_first()
-		post_date = self.convert_unicode(post_date).replace('Ngay dang: ', '').replace("/","-")
-		if post_date =="Hom nay":
-			post_date=datetime.datetime.now()
-		elif post_date == "Hom qua":
-			post_date=datetime.datetime.now() - datetime.timedelta(1)
-		else:
-			post_date=datetime.datetime.strptime(post_date,"%d-%m-%Y") #
-		weekday = post_date.weekday()
-		if post_date<self.last_post_time:
-			print(post_date.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
-			return
-	
+		weekday = self.post_date.weekday()
+
 		# Get title
 		title = self.convert_unicode(response.xpath('//div[@class="title"]/h1/text()').extract_first())
 
@@ -199,7 +215,7 @@ class AlonhadatSpider(scrapy.Spider):
 			'post-id': post_id,
 			'website': 'alonhadat.com.vn',
 			'author': author,
-			'post-time': {'date': post_date.strftime("%d-%m-%Y"),'weekday': weekday},
+			'post-time': {'date': self.post_date.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,
 			'location': {'province': province, 'county': county, 'road':road, 'ward': ward, 'detailed': location_detail},
 			'area':self.area,
