@@ -78,6 +78,7 @@ class MuabannhadatSpider(scrapy.Spider):
 			item_url = "http://www.muabannhadat.vn" + item.xpath(".//a[@class='title-filter-link']/@href").extract_first()
 
 			if date_post < self.last_post_time and vip == False:
+				print ("SORRY, WE END HERE")
 				already_crawled = True
 				break
 			else:
