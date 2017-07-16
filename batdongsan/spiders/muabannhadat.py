@@ -46,7 +46,7 @@ class MuabannhadatSpider(scrapy.Spider):
 
 	def parse(self, response):  
 		# Get all items from the page
-		items = response.xpath("//div[contains(@id,'_divListingInformation_')]")
+		items = response.xpath("//div[contains(@id,'_divGroupListItem_')]")
 		already_crawled=False
 		# We use is_updated here because we want the first page to be run only one time for both 2 links
 		if (response.url.find("p=")==-1) and self.is_updated==False: # Process the first page
@@ -64,15 +64,20 @@ class MuabannhadatSpider(scrapy.Spider):
 
 		# Read every post one by one
 		for item in items:
+			vip = False
+			# Get Vip item
+			item_type = item.xpath("@class").extract_first()
+			if 'Product-Top' in item_type:
+				vip = True
 
 			# Get date_post
-			date_post = item.xpath(".//div[@class= 'col-lg-4 lline hidden-xs']/text()").extract_first()
-			date_post = self.convert_unicode(date_post).replace('Ngay dang: ', '').replace(".","-").strip()
+			date_post = item.xpath(".//div[@class= 'col-lg-6 lline col-xs-9 hidden-xs']/text()").extract_first()
+			date_post = self.convert_unicode(date_post).replace('Ngay cap nhat: ', '').replace(".","-").strip()
 			date_post = datetime.datetime.strptime(date_post ,"%d/%m/%Y")
 				
 			item_url = "http://www.muabannhadat.vn" + item.xpath(".//a[@class='title-filter-link']/@href").extract_first()
 
-			if date_post < self.last_post_time:
+			if date_post < self.last_post_time and vip == False:
 				already_crawled = True
 				break
 			else:
@@ -117,7 +122,7 @@ class MuabannhadatSpider(scrapy.Spider):
 		title = title.strip()
 
 		# Get post date
-		date_post=response.xpath("//span[@id='MainContent_ctlDetailBox_lblDateCreated']/text()").extract_first()
+		date_post=response.xpath("//span[@id='MainContent_ctlDetailBox_lblDateUpdated']/text()").extract_first()
 		date_post=datetime.datetime.strptime(date_post,"%d.%m.%Y")
 		weekday = date_post.weekday()
 		
