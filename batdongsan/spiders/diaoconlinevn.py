@@ -9,6 +9,7 @@ from scrapy_splash import SplashRequest
 
 class QuotesSpider(scrapy.Spider):
 	name = "diaoconline"
+	last_post_time=""
 
 	def start_requests(self):
 		print ("GO HERE")
@@ -47,7 +48,7 @@ class QuotesSpider(scrapy.Spider):
 		return real_price
 
 	def parse(self, response):
-		print (" START TO PARSE")
+		print (" START TO PARSE"+"="*10)
 
 		# Get all posts
 		items = response.xpath("//li[contains(@class,'hightlight_type_1 margin_bottom')]")
@@ -56,7 +57,9 @@ class QuotesSpider(scrapy.Spider):
 			return
 		already_crawl=False
 		# Process the first page
-		if response.url.find("pi") == -1 and self.is_updated == False:
+		url_length=len(response.url.split("/"))
+
+		if url_length==4 and self.is_updated == False:
 			print ("Process First Page")
 			self.is_updated = True
 			with open('last_post_id.json', 'r+') as f:
@@ -64,6 +67,7 @@ class QuotesSpider(scrapy.Spider):
 				self.last_post_time = ''
 				if "diaoconline" in data:
 					self.last_post_time = datetime.datetime.strptime(data["diaoconline"],"%d-%m-%Y %H:%M")
+					print("=="*100)
 					data["diaoconline"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
 
 			os.remove('last_post_id.json')
@@ -75,18 +79,18 @@ class QuotesSpider(scrapy.Spider):
 			item_url = item.xpath(".//div[@class='info margin_left']/h2/a/@href").extract_first()
 			print(item_url)
 			item_url =  "http://diaoconline.vn" + item_url
-			post_time=self.convert_unicode(item.xpath(".//span[contains(@class,'post_type')]/text()").extract_first().split(": ")[1])
-			if('truoc' in post_time):
-				post_time=datetime.datetime.now()
+			post_date=self.convert_unicode(item.xpath(".//span[contains(@class,'post_type')]/text()").extract_first().split(": ")[1])
+			if('truoc' in post_date):
+				post_date=datetime.datetime.now()
 			else:
-				post_time=datetime.datetime.strptime(date,"%d-%m-%Y")
-			if post_time < self.last_post_time:
+				post_date=datetime.datetime.strptime(date,"%d-%m-%Y")
+			if post_date < self.last_post_time:
 				already_crawl=True
 				break
 
 			print ("ITEM_URL: " )
 			print(item_url)
-			yield scrapy.Request(item_url,callback=self.parse_item,meta={"date":post_time})
+			yield scrapy.Request(item_url,callback=self.parse_item,meta={"date":post_date})
 
 		self.index = self.index + 1
 		print ("INDEX: " + str(self.index))
@@ -121,7 +125,7 @@ class QuotesSpider(scrapy.Spider):
 		title = self.convert_unicode(response.xpath('//h1[contains(@class, "larger_title")]/text()').extract_first())
 
 		# Get Post ID
-		post_id = response.xpath("//div[contains(@class, 'feat_item')]/dl/dd").extract_first()
+		post_id = response.xpath("//div[contains(@class, 'feat_item')]/dl/dd/text()").extract_first()
 
 		# Get Area
 		area = re.sub('[\r\n]', '', self.convert_unicode(response.xpath("//div[@class='feat_item']/dl/dd/text()")[1].extract()))
