@@ -1,4 +1,3 @@
-
 import scrapy
 import re
 import unicodedata
@@ -10,33 +9,36 @@ from scrapy_splash import SplashRequest
 
 class QuotesSpider(scrapy.Spider):
 	name = "diaoconline"
+	last_post_time=""
 
 	def start_requests(self):
 		print ("GO HERE")
 		self.is_updated=False
-		index = 0
+		self.index = 1
 		urls = [
-		'http://diaoconline.vn/sieu-thi/loc/?tindang=1',
-		'http://diaoconline.vn/sieu-thi/loc/?tindang=2'
+		'http://diaoconline.vn/sieu-thi',
 		]
 
 		for url in urls:
-			yield SplashRequest(url, self.parse)
+			yield scrapy.Request(url, self.parse)
 
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		
+		text=re.sub(chr(272),'D',text)
+		text=re.sub(chr(273),'d',text)
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
+		text=text.decode("utf8")
 		text=text.replace('\n','')
 		text=text.replace('\t','')
 		text=text.replace('\r','')
+		text=text.strip()
 		return text
 
 	def convert_price(self,price):
 		list_price = price.split()
-		if len(price) > 3:
+		if len(list_price) > 3:
 			real_price = float(list_price[0])*1000000000 + float(list_price[2])*1000000
 		else:
 			if 'trieu' in price:
@@ -46,7 +48,7 @@ class QuotesSpider(scrapy.Spider):
 		return real_price
 
 	def parse(self, response):
-		print (" START TO PARSE")
+		print (" START TO PARSE"+"="*10)
 
 		# Get all posts
 		items = response.xpath("//li[contains(@class,'hightlight_type_1 margin_bottom')]")
@@ -55,7 +57,9 @@ class QuotesSpider(scrapy.Spider):
 			return
 		already_crawl=False
 		# Process the first page
-		if response.url.find("pi") == -1 and self.is_updated == False:
+		url_length=len(response.url.split("/"))
+
+		if url_length==4 and self.is_updated == False:
 			print ("Process First Page")
 			self.is_updated = True
 			with open('last_post_id.json', 'r+') as f:
@@ -63,6 +67,7 @@ class QuotesSpider(scrapy.Spider):
 				self.last_post_time = ''
 				if "diaoconline" in data:
 					self.last_post_time = datetime.datetime.strptime(data["diaoconline"],"%d-%m-%Y %H:%M")
+					print("=="*100)
 					data["diaoconline"] = (datetime.datetime.now()-datetime.timedelta(minutes=4)).strftime("%d-%m-%Y %H:%M")
 
 			os.remove('last_post_id.json')
@@ -71,42 +76,39 @@ class QuotesSpider(scrapy.Spider):
 					
 		for item in items:
 			# Get URL of each item
-			item_url = item.xpath("//div[@class='info margin_left']/h2/a/@href/text()")
+			item_url = item.xpath(".//div[@class='info margin_left']/h2/a/@href").extract_first()
+			print(item_url)
 			item_url =  "http://diaoconline.vn" + item_url
-			post_time=self.convert_unicode(item.xpath(".//span[contains(@class,'post_type')]/text()").extract_first().split(": "))
-			if('truoc' in post_time):
-				post_time=datetime.datetime.now()
+			post_date=self.convert_unicode(item.xpath(".//span[contains(@class,'post_type')]/text()").extract_first().split(": ")[1])
+			if('truoc' in post_date):
+				post_date=datetime.datetime.now()
 			else:
-				date=datetime.datetime.strptime(date,"%d-%m-%Y")
-			if post_time < self.last_post_time:
+				post_date=datetime.datetime.strptime(date,"%d-%m-%Y")
+			if post_date < self.last_post_time:
 				already_crawl=True
+				break
 
 			print ("ITEM_URL: " )
 			print(item_url)
-			yield scrapy.Request(item_url,callback=self.parse_item)
+			yield scrapy.Request(item_url,callback=self.parse_item,meta={"date":post_date})
 
 		self.index = self.index + 1
-		print ("INDEX: " + self.index)
+		print ("INDEX: " + str(self.index))
 
-		if response.url.find("tindang=1") == -1: # Rent
-			next_href = "http://diaoconline.vn/sieu-thi/loc/?tindang=1&pi=" + char(self.index);
-		else: # Sell
-			next_href = "http://diaoconline.vn/sieu-thi/loc/?tindang=2&pi=" + char(self.index);
+		
+		next_href = "http://diaoconline.vn/sieu-thi/" + str(self.index);
 		# Go to next page
 		print ('NEXT PAGE URL: ' + next_href)
-		yield SplashRequest(next_href, callback=self.parse)
+		if already_crawl==False and len(items)>0:
+			yield scrapy.Request(next_href, callback=self.parse)
 
 	def	parse_item(self, response):
 		# Get post time
-		post_time = self.convert_unicode(response.xpath("//span[@class='post_type']/text()").extract_first())
-		if('truoc' in post_time):
-			post_time=datetime.datetime.now()
-		else:
-			date=datetime.datetime.strptime(date,"%d-%m-%Y")
+		post_time = response.meta['date']
 		if post_time < self.last_post_time:
 			print(post_time.strftime("%d-%m-%Y"),self.last_post_time.strftime("%d-%m-%Y"),response.url)
 			return
-
+		weekday=post_time.weekday()
 		# Get price of property
 		price = response.xpath("//div[contains(@class, 'money')]/text()").extract_first()
 		price = price.strip()
@@ -123,7 +125,7 @@ class QuotesSpider(scrapy.Spider):
 		title = self.convert_unicode(response.xpath('//h1[contains(@class, "larger_title")]/text()').extract_first())
 
 		# Get Post ID
-		post_id = response.xpath("//div[contains(@class, 'feat_item')]/dl/dd").extract_first()
+		post_id = response.xpath("//div[contains(@class, 'feat_item')]/dl/dd/text()").extract_first()
 
 		# Get Area
 		area = re.sub('[\r\n]', '', self.convert_unicode(response.xpath("//div[@class='feat_item']/dl/dd/text()")[1].extract()))
@@ -139,19 +141,47 @@ class QuotesSpider(scrapy.Spider):
 
 		# Get provience
 		location_array = location.split(',')
-		province = location_array[3]
+		province = location_array[-1]
 
 		# Get county
-		county = location_array[2]
+		county=""
+		if len(location_array)>=2:
+			county = location_array[-2]
+		ward=""
+		road=""
+		if len(location_array)>=3:
+			ward = location_array[-3]
+		if len(location_array)>=4:
+			road = location_array[-4]
+
+		#bed_count
+		bedcount=self.convert_unicode(response.xpath("//div[@class='feat_item']/dl/dd/text()")[-2].extract())
 		
 		# Get house type
 		house_type = self.convert_unicode(response.xpath("//strong/a[@class='link-ext']/text()").extract_first())
 
 		# Get transaction type
-		transaction_type = self.convert_unicode(response.xpath("//span[@itemprop='title']/text()")[1].extract())
+		transaction_type = self.convert_unicode(response.xpath("//span[@itemprop='title']/text()")[1].extract().split(" ")[0])
+		if transaction_type=='Ban':
+			transaction_type="Can ban"
+		else:
+			transaction_type="Cho thue"
+		print(transaction_type)
 		
 		yield {
-			'post-id': post_id
+			'post-id': post_id,
+			'website': "diaoconline.vn",
+			'author': author_name,
+			'post-time': {'date': post_time.strftime("%d-%m-%Y"),'weekday': weekday},
+			'title': title,
+			'location': {'province': province,'county': county, 'ward':ward, 'road':road, 'detailed': location},
+			'area':area,
+			'price':price,
+			'transaction-type': transaction_type,
+			'description': description,
+			'house-type': house_type,
+			'project': "",
+			'bedcount': bedcount
 		} 
 
 		

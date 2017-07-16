@@ -12,7 +12,6 @@ class AlonhadatSpider(scrapy.Spider):
 
 	def start_requests(self):		
 		self.is_updated = False 
-		self.test = "1"
 		urls = [
 		'http://alonhadat.com.vn/nha-dat/can-ban.html',
 		'http://alonhadat.com.vn/nha-dat/cho-thue.html'
