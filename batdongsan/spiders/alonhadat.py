@@ -12,7 +12,6 @@ class AlonhadatSpider(scrapy.Spider):
 
 	def start_requests(self):		
 		self.is_updated = False 
-		self.post_date = ''
 		self.test = "1"
 		urls = [
 		'http://alonhadat.com.vn/nha-dat/can-ban.html',
@@ -34,10 +33,10 @@ class AlonhadatSpider(scrapy.Spider):
 		text=text.replace('\r','')
 		return text
 
-	def convert_price(self, price):
+	def convert_price(self, price, area):
 		list_price = price.split()
 		if price.find('/') != -1:
-			real_price = float(list_price[0].replace(",",".")) * 1000000 * int(self.area)
+			real_price = float(list_price[0].replace(",",".")) * 1000000 * int(area)
 			return real_price
 		if list_price[1] == 'trieu':
 			real_price = float(list_price[0].replace(",",".")) * 1000000
@@ -55,10 +54,10 @@ class AlonhadatSpider(scrapy.Spider):
 		return date
 
 	def parse(self, response):
-		print('Response URL: ' + response.url)
+		already_crawl=False
+
 		# Get all items
 		items = response.xpath(".//div[@class='content-item']")
-		already_crawl=False
 		if response.url.find('trang') == -1 and self.is_updated == False: # Process the first page
 			print ("Process First Page")
 			self.is_updated = True
@@ -81,13 +80,17 @@ class AlonhadatSpider(scrapy.Spider):
 		for item in items:
 			item_url = "http://alonhadat.com.vn" + item.xpath(".//div[@class='ct_title']//@href").extract_first()
 
+			# Get VIP of item
+			vip = item.xpath("./div[@class='vipstar']")
+
 			# Get post_date of the item
 			post_date = item.xpath(".//div[@class='ct_date']//text()").extract_first()
 			post_date = self.convert_unicode(post_date)
 			post_date = self.convert_postDate(post_date)
 
-			if post_date < self.last_post_time:
+			if post_date < self.last_post_time and vip == []:
 				already_crawl=True
+				break
 			else:
 				yield scrapy.Request(item_url,callback=self.parse_item)
 
@@ -110,20 +113,18 @@ class AlonhadatSpider(scrapy.Spider):
 			print("Next Page Url: " + next_page_url)
 			yield scrapy.Request(next_page_url,callback=self.parse)
 
-
 	def parse_item(self, response):
 		# Get area
 		area = response.xpath("//span[@class='square']/span[@class='value']/text()").extract_first()
 		area = area.strip().replace(" m","")
 		area = area.strip().replace(".","")
 
-
 		# Get price
 		price = response.xpath("//span[@class='price']/span[@class='value']/text()").extract_first()
 		price = self.convert_unicode(price)
 		if price.find("thuan") !=-1:
 			return
-		price = self.convert_price(price)
+		price = self.convert_price(price, area)
 
 		# Get property type
 		house_type = self.convert_unicode(response.xpath(u"//td[contains(text(),'Loại BDS')]/following-sibling::td").extract_first())
@@ -158,9 +159,9 @@ class AlonhadatSpider(scrapy.Spider):
 		post_id = post_id.replace("<td>","")
 		post_id = post_id.replace("</td>","")
 
-
-		post_date=convert_unicode(response.xpath("./span[@class='date']/text()").extract_first()).split(": ")[1]
-		post_date=self.convert_price(post_date)
+		# Get post date
+		post_date=self.convert_unicode(response.xpath("//span[@class='date']/text()").extract_first()).split(": ")[1]
+		post_date=self.convert_postDate(post_date)
 		weekday = post_date.weekday()
 
 		# Get title

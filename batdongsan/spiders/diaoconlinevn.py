@@ -14,7 +14,7 @@ class QuotesSpider(scrapy.Spider):
 	def start_requests(self):
 		print ("GO HERE")
 		self.is_updated=False
-		self.index = 0
+		index = 0
 		urls = [
 		'http://diaoconline.vn/sieu-thi/loc/?tindang=1',
 		'http://diaoconline.vn/sieu-thi/loc/?tindang=2'
