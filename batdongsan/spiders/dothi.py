@@ -167,7 +167,7 @@ class MuabannhadatSpider(scrapy.Spider):
 
 		yield {
 			'post-id': post_id,
-			'website': "muabannhadat.vn",
+			'website': "dothi",
 			'author': author,
 			'post-time': {'date': date_post.strftime("%d-%m-%Y"),'weekday': weekday},
 			'title': title,

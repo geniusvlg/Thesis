@@ -25,8 +25,8 @@ class MuabannhadatSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(chr(272),'D',text);
-		text=re.sub(chr(273),'d',text);
+		text=re.sub(unichr(272),'D',text);
+		text=re.sub(unichr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode('utf8')
 		text=text.replace('\n','')
@@ -72,11 +72,9 @@ class MuabannhadatSpider(scrapy.Spider):
 				
 			item_url = "http://www.muabannhadat.vn" + item.xpath(".//a[@class='title-filter-link']/@href").extract_first()
 
-			print("DATE POST: ")
-			print(date_post)
-
 			if date_post < self.last_post_time:
 				already_crawled = True
+				break
 			else:
 				yield scrapy.Request(item_url,callback=self.parse_item)
 
@@ -88,6 +86,11 @@ class MuabannhadatSpider(scrapy.Spider):
 			yield scrapy.Request(next_page_address,callback=self.parse)
 
 	def parse_item(self, response):
+		# Get transaction_type
+		if (re.search('cho-thue', response.url) != None):
+			transaction_type = 'cho thue'	
+		else:
+			transaction_type = 'can ban'
 
 		# Get description of the property
 		desciption = self.convert_unicode(re.sub("\r|\n|\t",""," ".join(response.xpath(".//div[contains(@id, 'Description')]/text()").extract()))).strip(" ")
@@ -113,9 +116,9 @@ class MuabannhadatSpider(scrapy.Spider):
 		title = self.convert_unicode(title)
 		title = title.strip()
 
+		# Get post date
 		date_post=response.xpath("//span[@id='MainContent_ctlDetailBox_lblDateCreated']/text()").extract_first()
 		date_post=datetime.datetime.strptime(date_post,"%d.%m.%Y")
-		# Get weekday
 		weekday = date_post.weekday()
 		
 		# Get province 
@@ -179,7 +182,7 @@ class MuabannhadatSpider(scrapy.Spider):
 			'location': {'province': province,'county': county, 'ward':ward, 'road':road, 'detailed': location_detail},
 			'area':area,
 			'price':price,
-			'transaction-type': "Can ban",
+			'transaction-type': transaction_type,
 			'description': desciption,
 			'house-type': house_type,
 			'project': project,
