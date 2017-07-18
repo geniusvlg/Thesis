@@ -73,8 +73,11 @@ class MuabannhadatSpider(scrapy.Spider):
 			# Get date_post
 			date_post = item.xpath(".//div[@class= 'col-lg-6 lline col-xs-9 hidden-xs']/text()").extract_first()
 			date_post = self.convert_unicode(date_post).replace('Ngay cap nhat: ', '').replace(".","-").strip()
+			if date_post == '':
+				date_post = item.xpath(".//div[@class= 'col-lg-4 lline hidden-xs']/text()").extract_first()
+				date_post = self.convert_unicode(date_post).replace('Ngay dang: ', '').replace(".","-").strip()
+
 			date_post = datetime.datetime.strptime(date_post ,"%d/%m/%Y")
-				
 			item_url = "http://www.muabannhadat.vn" + item.xpath(".//a[@class='title-filter-link']/@href").extract_first()
 
 			if date_post < self.last_post_time and vip == False:
@@ -124,6 +127,9 @@ class MuabannhadatSpider(scrapy.Spider):
 
 		# Get post date
 		date_post=response.xpath("//span[@id='MainContent_ctlDetailBox_lblDateUpdated']/text()").extract_first()
+		if date_post == None:
+			date_post=response.xpath("//span[@id='MainContent_ctlDetailBox_lblDateCreated']/text()").extract_first()
+
 		date_post=datetime.datetime.strptime(date_post,"%d.%m.%Y")
 		weekday = date_post.weekday()
 		
