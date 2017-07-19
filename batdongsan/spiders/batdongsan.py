@@ -21,7 +21,7 @@ def is_number(text):
 class BatdongsanSpider(scrapy.Spider):
 	name="batdongsan"
 	last_post_time=""
-	download_delay=1.5
+	download_delay=1
 	is_updated=False
 	baseUrl=''
 	def start_requests(self):
@@ -29,6 +29,7 @@ class BatdongsanSpider(scrapy.Spider):
 		self.state['baseUrl']=self.baseUrl
 		self.is_updated=False
 		self.last_post_time=datetime.datetime.strptime("01-09-2016 00:00","%d-%m-%Y %H:%M")
+		self.state['last_post_time']=self.last_post_time
 		urls = [
 			"http://batdongsan.com.vn/nha-dat-cho-thue",
 			"http://batdongsan.com.vn/nha-dat-ban"
@@ -118,21 +119,21 @@ class BatdongsanSpider(scrapy.Spider):
 		already_crawl=False
 
 		url_length=len(response.url.split('/'))
-		if (url_length==4 and self.is_updated==False and 'is_updated' not in self.state.keys()): #first page
-			self.is_updated=True
-			self.state['is_updated']=True
-			with open('last_post_id.json','r+') as f:
-				data=json.load(f)
-				self.last_post_time=''
-				self.last_post_time=datetime.datetime.strptime('01-01-2012 00:00',"%d-%m-%Y %H:%M")
-				if "batdongsan" in data:
-					self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
-					self.state['last_post_time']=self.last_post_time
-				data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
-				print(self.last_post_time)
-			os.remove('last_post_id.json')
-			with open('last_post_id.json','w') as f:
-				json.dump(data,f,indent = 4)
+		# if (url_length==4 and self.is_updated==False and 'is_updated' not in self.state.keys()): #first page
+		# 	self.is_updated=True
+		# 	self.state['is_updated']=True
+		# 	with open('last_post_id.json','r+') as f:
+		# 		data=json.load(f)
+		# 		self.last_post_time=''
+		# 		self.last_post_time=datetime.datetime.strptime('01-01-2012 00:00',"%d-%m-%Y %H:%M")
+		# 		if "batdongsan" in data:
+		# 			self.last_post_time=datetime.datetime.strptime(data["batdongsan"],"%d-%m-%Y %H:%M")
+		# 			self.state['last_post_time']=self.last_post_time
+		# 		data["batdongsan"]=(datetime.datetime.now()-datetime.timedelta(minutes=15)).strftime("%d-%m-%Y %H:%M")
+		# 		print(self.last_post_time)
+		# 	os.remove('last_post_id.json')
+		# 	with open('last_post_id.json','w') as f:
+		# 		json.dump(data,f,indent = 4)
 		pager=response.xpath("//div[@class='background-pager-controls']/div/a/div/text()").extract()
 		is_last_page=False
 		if pager!=[]:
@@ -148,10 +149,9 @@ class BatdongsanSpider(scrapy.Spider):
 			url=item.xpath("./div[@class='p-title']/h3/a/@href").extract_first()
 			date_text=self.convert_unicode(item.xpath("./div[@class='p-main']/div[contains(@class,'p-bottom-crop')]/div[contains(@class,'floatright')]/text()").extract_first())
 			post_date=datetime.datetime.strptime(date_text,"%d/%m/%Y")
-			print(url)
-			print("="*100)
 			if post_date<self.last_post_time and item.xpath('./@class').extract_first().find('vip')==-1:
 				already_crawl=True
+				break
 			else:
 				if len(url)>0:
 					yield scrapy.Request(url=(self.baseUrl+url),meta={'province':meta['province'],'county':meta['county'],'post_date':post_date},callback=self.parseitem)

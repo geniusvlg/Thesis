@@ -18,9 +18,11 @@ class Fix():
             self.convert_table=json.load(f)
         for filename in os.listdir(self.path):
             with open('./middle/'+filename,'w') as fo:
-                with open(self.path+'/'+filename,'r') as f:
+                with open(self.path+'/'+filename,'r',encoding='utf8') as f:
                     ite=0
+                    print(filename)
                     for line in f:
+
                         ite+=1
                         if ite%5000==0:
                             print("Processed {}".format(ite))
@@ -97,5 +99,5 @@ class Fix():
 
 if __name__=='__main__':
     main=Fix()
-    # main.merge_house_type()
-    main.fix_object()
+    main.merge_house_type()
+    # main.fix_object()

@@ -22,7 +22,7 @@ class MongoWrite:
             self.write_time()
 
     def read_json(self,command):
-        with open('./processed/merge_output_fix.json') as f:
+        with open('./processed/merge_output.json') as f:
             data=json.load(f)
             self.read_leaf(data,command)
 
