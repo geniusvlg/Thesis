@@ -22,7 +22,8 @@ class Fix():
                     ite=0
                     print(filename)
                     for line in f:
-
+                        # if(filename=="batdongsan1507.jl"):
+                        #     print(ite)
                         ite+=1
                         if ite%5000==0:
                             print("Processed {}".format(ite))

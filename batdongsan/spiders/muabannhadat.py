@@ -25,8 +25,8 @@ class MuabannhadatSpider(scrapy.Spider):
 	def convert_unicode(self,text):
 		if text=='':
 			return text
-		text=re.sub(unichr(272),'D',text);
-		text=re.sub(unichr(273),'d',text);
+		text=re.sub(chr(272),'D',text);
+		text=re.sub(chr(273),'d',text);
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode('utf8')
 		text=text.replace('\n','')
@@ -71,7 +71,7 @@ class MuabannhadatSpider(scrapy.Spider):
 				vip = True
 
 			# Get date_post
-			date_post = item.xpath(".//div[@class= 'col-lg-6 lline col-xs-9 hidden-xs']/text()").extract_first()
+			date_post = item.xpath(".//div[contains(@class,'col-lg-6')]/text()").extract_first()
 			date_post = self.convert_unicode(date_post).replace('Ngay cap nhat: ', '').replace(".","-").strip()
 			if date_post == '':
 				date_post = item.xpath(".//div[@class= 'col-lg-4 lline hidden-xs']/text()").extract_first()
