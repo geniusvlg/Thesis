@@ -182,6 +182,8 @@ class ProcessData:
                         #     if ward=='':
                         #         continue
                         #     by_ward=by_county[ward]
+                        if county=="" or county=="khac":
+                            continue
                         for house_type in by_county:
                             desc_list=[]
                             item_list=[]

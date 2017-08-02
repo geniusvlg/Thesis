@@ -53,7 +53,9 @@ class Fix():
                     location['ward']="Thanh pho Vung Tau"
             if location['province'].lower() == 'hcm':
                 location['province'] = 'ho chi minh'
-
+        if website=='diaoconline.vn':
+            if location['province']=='tp.hcm':
+                location['province'] = 'ho chi minh'
         for att in location:
             if location[att]=='':
                 location[att]='Khac'
@@ -96,9 +98,11 @@ class Fix():
                 self.read_leaf(v)
             else:
                 for item in v:
-                    item['location']=self.merge_location(item['location'],item['website'])
+                    # item['location']=self.merge_location(item['location'],item['website'])
+                    if item['location']['province']=='tp.hcm':
+                        item['location']['province'] = 'ho chi minh'
 
 if __name__=='__main__':
     main=Fix()
-    main.merge_house_type()
-    # main.fix_object()
+    # main.merge_house_type()
+    main.fix_object()
