@@ -146,7 +146,7 @@ class Fix():
                     # item['location']=self.merge_location(item['location'],item['website'])
                     if item['location']['province']=='tp.hcm':
                         item['location']['province'] = 'ho chi minh'
-                    if item['location']['county'].find("Vi tri:")!=-1:
+                    if item['location']['county'].find("vi tri:")!=-1:
                         tmp = item['location']['county'].split(":")
                         tmp2 = tmp[1].split(" ");
                         if len(tmp2)>2:
