@@ -26,8 +26,8 @@ class QuotesSpider(scrapy.Spider):
 		if text=='':
 			return text
 		
-		text=re.sub(chr(272),'D',text)
-		text=re.sub(chr(273),'d',text)
+		text=re.sub(unichr(272),'D',text)
+		text=re.sub(unichr(273),'d',text)
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode("utf8")
 		text=text.replace('\n','')
@@ -137,8 +137,8 @@ class QuotesSpider(scrapy.Spider):
 		author_phone = response.xpath("//div[@class='body']/dl/dd/span/text()").extract_first()
 
 		# Get location of property
-		location = re.sub('Vi tri:\r\n','',self.convert_unicode(response.xpath('//span[contains(@class, "location")]/text()').extract_first()))
-
+		location = self.convert_unicode(response.xpath('//span[contains(@class, "location")]/text()').extract_first())
+		location = location.strip('Vi tri: ')
 		# Get provience
 		location_array = location.split(',')
 		province = location_array[-1]
@@ -146,13 +146,13 @@ class QuotesSpider(scrapy.Spider):
 		# Get county
 		county=""
 		if len(location_array)>=2:
-			county = location_array[-2]
+			county = location_array[-2].lstrip()
 		ward=""
 		road=""
 		if len(location_array)>=3:
-			ward = location_array[-3]
+			ward = location_array[-3].lstrip()
 		if len(location_array)>=4:
-			road = location_array[-4]
+			road = location_array[-4].lstrip()
 
 		#bed_count
 		bedcount=self.convert_unicode(response.xpath("//div[@class='feat_item']/dl/dd/text()")[-2].extract())
