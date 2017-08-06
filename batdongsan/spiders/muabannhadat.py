@@ -96,7 +96,8 @@ class MuabannhadatSpider(scrapy.Spider):
 
 	def parse_item(self, response):
 		# Get transaction_type
-		if (re.search('cho-thue', response.url) != None):
+		url = response.request.meta['redirect_urls']
+		if (re.search('cho-thue', url[0]) != None):
 			transaction_type = 'cho thue'	
 		else:
 			transaction_type = 'can ban'
