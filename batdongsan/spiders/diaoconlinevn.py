@@ -26,8 +26,8 @@ class QuotesSpider(scrapy.Spider):
 		if text=='':
 			return text
 		
-		text=re.sub(unichr(272),'D',text)
-		text=re.sub(unichr(273),'d',text)
+		text=re.sub(chr(272),'D',text)
+		text=re.sub(chr(273),'d',text)
 		text=unicodedata.normalize('NFKD', text).encode('ascii','ignore')
 		text=text.decode("utf8")
 		text=text.replace('\n','')
@@ -101,6 +101,8 @@ class QuotesSpider(scrapy.Spider):
 		print ('NEXT PAGE URL: ' + next_href)
 		if already_crawl==False and len(items)>0:
 			yield scrapy.Request(next_href, callback=self.parse)
+		else:
+			print("END")
 
 	def	parse_item(self, response):
 		# Get post time

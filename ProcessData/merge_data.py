@@ -142,20 +142,26 @@ class Fix():
                 self.read_leaf(v)
             else:
                 del_list=[]
-                for i, item in enumerate(v):
-                    # item['location']=self.merge_location(item['location'],item['website'])
-                    if item['location']['province']=='tp.hcm':
-                        item['location']['province'] = 'ho chi minh'
-                    if item['location']['county'].find("vi tri:")!=-1:
-                        tmp = item['location']['county'].split(":")
-                        tmp2 = tmp[1].split(" ");
-                        if len(tmp2)>2:
-                            del tmp2[0]
-                        item['location']['county']=" ".join(tmp2)
-                    if item['location']['county']=='q.hai ba trung':
-                        item['location']['county']='hai ba trung'
-                    if item['location']['province'] == 'ho chi minh' and item['location']['county'] in self.hn_counties:
-                        del_list.append(i)
+                with open('./move_data.json','a') as of:
+                  for i, item in enumerate(v):
+                      # item['location']=self.merge_location(item['location'],item['website'])
+                      if item['location']['province']=='tp.hcm':
+                          item['location']['province'] = 'ho chi minh'
+                      if item['location']['county'].find("vi tri:")!=-1:
+                          tmp = item['location']['county'].split(":")
+                          tmp2 = tmp[1].split(" ");
+                          if len(tmp2)>2:
+                              del tmp2[0]
+                          item['location']['county']=" ".join(tmp2)
+                      if item['location']['county']=='q.hai ba trung':
+                          item['location']['county']='hai ba trung'
+                      if item['location']['province'] == 'ho chi minh' and item['location']['county'] in self.hn_counties:
+                          del_list.append(i)
+                      if (item['title'].find('Cho thue')!=-1 or item['title'].find('cho thue')!=-1) and item['transaction-type']=='can ban' and item['website']=='muabannhadat.vn':
+                          del_list.append(i)
+                          json.dump(item,of)
+                          of.write("\n")
+
                 for i in reversed(del_list):
                     del v[i]
 
