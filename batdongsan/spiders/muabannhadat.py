@@ -85,7 +85,7 @@ class MuabannhadatSpider(scrapy.Spider):
 				already_crawled = True
 				break
 			else:
-				yield scrapy.Request(item_url,callback=self.parse_item)
+				yield scrapy.Request(item_url,callback=self.parse_item,meta={"url":item_url})
 
 		# Go to the next page
 		next_page = response.xpath("//a[contains(@id,'_lnkNext')]/@href")
@@ -96,7 +96,8 @@ class MuabannhadatSpider(scrapy.Spider):
 
 	def parse_item(self, response):
 		# Get transaction_type
-		if (re.search('cho-thue', response.url) != None):
+		url = response.meta['url']
+		if (re.search('cho-thue', url) != None):
 			transaction_type = 'cho thue'	
 		else:
 			transaction_type = 'can ban'

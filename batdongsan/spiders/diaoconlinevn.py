@@ -83,7 +83,8 @@ class QuotesSpider(scrapy.Spider):
 			if('truoc' in post_date):
 				post_date=datetime.datetime.now()
 			else:
-				post_date=datetime.datetime.strptime(date,"%d-%m-%Y")
+				post_date=post_date.split(" ")[0]
+				post_date=datetime.datetime.strptime(post_date,"%d/%m/%Y")
 			if post_date < self.last_post_time:
 				already_crawl=True
 				break

@@ -93,6 +93,10 @@ class Fix():
         if website=='diaoconline.vn':
             if location['province']=='tp.hcm':
                 location['province'] = 'ho chi minh'
+            if location['county']=='tp.vung tau':
+                location['county']='vung tau'
+            if location['province']=='ba ria - vung tau':
+                location['province']='ba ria vung tau'
             if re.search("vi tri:",item['location']['county'])!=-1:
                 tmp = item['location']['county'].split(" ")
                 if is_number(tmp[1]):
@@ -147,6 +151,8 @@ class Fix():
                       # item['location']=self.merge_location(item['location'],item['website'])
                       if item['location']['province']=='tp.hcm':
                           item['location']['province'] = 'ho chi minh'
+                      if item['location']['county']=='tp.vung tau':
+                          item['location']['county']='vung tau'
                       if item['location']['county'].find("vi tri:")!=-1:
                           tmp = item['location']['county'].split(":")
                           tmp2 = tmp[1].split(" ");
@@ -157,10 +163,19 @@ class Fix():
                           item['location']['county']='hai ba trung'
                       if item['location']['province'] == 'ho chi minh' and item['location']['county'] in self.hn_counties:
                           del_list.append(i)
-                      if (item['title'].find('Cho thue')!=-1 or item['title'].find('cho thue')!=-1) and item['transaction-type']=='can ban' and item['website']=='muabannhadat.vn':
+                      if item['location']['province'] == 'ha noi' and not item['location']['county'] in self.hn_counties:
                           del_list.append(i)
-                          json.dump(item,of)
-                          of.write("\n")
+                      if item['location']['ward'].find("so")==0 and item['location']['county']=='quan 7':
+                          del_list.append(i)
+                      if item['location']['ward'].find('phuong')==0 and len(item['location']['ward'].split(" "))==1:
+                          item['location']['ward']=item['location']['ward'][:6]+" "+item['location']['ward'][6:]
+
+                      # if (item['title'].find('Cho thue')!=-1 or item['title'].find('cho thue')!=-1) and item['transaction-type']=='can ban' and item['website']=='muabannhadat.vn':
+                      #     del_list.append(i)
+                      #     json.dump(item,of)
+                      #     of.write("\n")
+                      if item['website']=='muabannhadat.vn':
+                          del_list.append(i)
 
                 for i in reversed(del_list):
                     del v[i]
