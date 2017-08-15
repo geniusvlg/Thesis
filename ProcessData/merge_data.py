@@ -146,7 +146,7 @@ class Fix():
                 self.read_leaf(v)
             else:
                 del_list=[]
-                with open('./move_data.json','a') as of:
+                with open('./move_data_diaoconline.json','a') as of:
                   for i, item in enumerate(v):
                       # item['location']=self.merge_location(item['location'],item['website'])
                       if item['location']['province']=='tp.hcm':
@@ -155,6 +155,11 @@ class Fix():
                           item['location']['county']='vung tau'
                       if item['location']['county'].find("vi tri:")!=-1:
                           tmp = item['location']['county'].split(":")
+                          tmp2 = tmp[1].split(" ");
+                          if len(tmp2)>2:
+                              del tmp2[0]
+                      if item['location']['ward'].find("vi tri:")!=-1:
+                          tmp = item['location']['ward'].split(":")
                           tmp2 = tmp[1].split(" ");
                           if len(tmp2)>2:
                               del tmp2[0]
@@ -169,6 +174,10 @@ class Fix():
                           del_list.append(i)
                       if item['location']['ward'].find('phuong')==0 and len(item['location']['ward'].split(" "))==1:
                           item['location']['ward']=item['location']['ward'][:6]+" "+item['location']['ward'][6:]
+                      if item['website']=='diaoconline.vn':
+                          del_list.append(i)
+                          json.dump(item,of)
+                          of.write("\n")
 
                       # if (item['title'].find('Cho thue')!=-1 or item['title'].find('cho thue')!=-1) and item['transaction-type']=='can ban' and item['website']=='muabannhadat.vn':
                       #     del_list.append(i)

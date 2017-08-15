@@ -141,7 +141,8 @@ class QuotesSpider(scrapy.Spider):
 
 		# Get location of property
 		location = self.convert_unicode(response.xpath('//span[contains(@class, "location")]/text()').extract_first())
-		location = location.strip('Vi tri: ')
+		location = location.strip('Vi tri:')
+		location = location.strip()
 		# Get provience
 		location_array = location.split(',')
 		province = location_array[-1]
