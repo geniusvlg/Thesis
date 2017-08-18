@@ -250,7 +250,8 @@ class Fix():
                       #     of.write("\n")
                       if item['website']=='muabannhadat.vn':
                           del_list.append(i)
-
+                del_list = list(set(del_list))
+                del_list.sort()
                 for i in reversed(del_list):
                     del v[i]
 
