@@ -16,3 +16,6 @@ ProcessData/test.txt
 Thesis Official.pdf
 Implementation.docx
 ProcessData/processed/merge_output.rar
+Raw data/process.py
+Raw data/mongo_write_off.py
+Raw data/merge_data.py
