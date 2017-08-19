@@ -1,5 +1,6 @@
 import json
 import os
+import datetime
 
 
 def is_number(text):
@@ -188,16 +189,16 @@ class Fix():
                         if att=='county':
                             location[att]="quan "+location[att]
                         elif att=='ward':
-                            location[att]='phuong' + location[att]
+                            location[att]='phuong ' + location[att]
         return location
 
     def fix_object(self):
         data={} 
         with open("./processed/merge_output.json",'r') as f: 
             data=json.load(f)
-        self.read_leaf(data)
-        with open('./processed/merge_output_fix.json','w') as of:
-            json.dump(data,of,indent=4)
+        self.read_leaf_move(data)
+        with open('./processed/merge_output_fix.jl','w') as of:
+            self.read_leaf_write(data,of)
 
     def read_leaf(self,data):
         del_list=[]
@@ -239,10 +240,10 @@ class Fix():
                           del_list.append(i)
                       if item['location']['ward'].find('phuong')==0 and len(item['location']['ward'].split(" "))==1:
                           item['location']['ward']=item['location']['ward'][:6]+" "+item['location']['ward'][6:]
-                      if item['website']=='diaoconline.vn':
-                          del_list.append(i)
-                          json.dump(item,of)
-                          of.write("\n")
+                      # if item['website']=='diaoconline.vn':
+                      #     del_list.append(i)
+                      #     json.dump(item,of)
+                      #     of.write("\n")
 
                       # if (item['title'].find('Cho thue')!=-1 or item['title'].find('cho thue')!=-1) and item['transaction-type']=='can ban' and item['website']=='muabannhadat.vn':
                       #     del_list.append(i)
@@ -254,6 +255,34 @@ class Fix():
                 del_list.sort()
                 for i in reversed(del_list):
                     del v[i]
+
+    def read_leaf_write(self,data,f):
+       del_list=[]
+       for k,v in data.items():
+           if isinstance(v,dict):
+               self.read_leaf_write(v,f)
+           else:
+               for item in v:
+                   json.dump(item,f)
+                   f.write('\n')
+
+    def read_leaf_move(self,data):
+        del_list=[]
+        for k,v in data.items():
+            if isinstance(v,dict):
+                self.read_leaf_move(v)
+            else:
+                del_list=[]
+                with open('./processed/old_data.jl','a') as of:
+                  for i, item in enumerate(v):
+                    delta_date = datetime.datetime.now()-datetime.datetime.strptime(str(item['post-time']['date']),'%d-%m-%Y')
+                    if (delta_date.days>50):
+                      del_list.append(i)
+                      json.dump(item,of)
+                      of.write('\n')
+                  for i in reversed(del_list):
+                    del v[i]
+
 
 
 

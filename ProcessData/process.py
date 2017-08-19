@@ -19,11 +19,12 @@ class ProcessData:
     data={}
 
     def process(self):
-        self.open_old_file()
+        # self.open_old_file()
         self.open_file()
         self.remove_duplication()
         self.remove_by_modified_z_score("price")
         self.remove_by_modified_z_score("area")
+        # self.remove_by_std()
         self.print_output()
 
     def open_file(self):
@@ -31,9 +32,9 @@ class ProcessData:
             print(filename)
             self.read_file(filename)
 
-    def open_old_file(self):
-        with open("./processed/merge_output.json",'r') as f:
-            self.data=json.load(f)
+    # def open_old_file(self):
+    #     with open("./processed/merge_output.jl",'r') as f:
+    #         self.data=json.load(f)
 
     def read_file(self,filename):
         print("READ FILE")
@@ -45,6 +46,8 @@ class ProcessData:
                 ite+=1
                 item=json.loads(line)
                 valid = False
+                item['area']=str(item['area'])
+                item['price']=str(item['price'])
                 if(is_number(str(item['area']).split('m')[0].replace(',','.')) and is_number(str(item['price']).replace(',','.'))):
                     if int(float(item['area'].split('m')[0].replace(',','.')))!=0 and item['price']!= 0:
                         item['price']=int(float(str(item['price']).replace(',','.'))/float(item['area'].split('m')[0].replace(',','.')))
@@ -163,8 +166,19 @@ class ProcessData:
             return int(array[(half_length//2 + half_length * rank)])
 
     def print_output(self):
-        with open('./processed/merge_output_new.json','w') as f:
-            json.dump(self.data,f,indent=4,separators=(',',': '),sort_keys=True)
+        with open('./processed/merge_output_new.jl','w') as f:
+            self.read_leaf(self.data,f)
+
+    def read_leaf(self,data,f):
+        del_list=[]
+        for k,v in data.items():
+            if isinstance(v,dict):
+                self.read_leaf(v)
+            else:
+                for item in v:
+                    json.dump(item,f)
+                    f.write('\n')
+                
 
     def remove_duplication(self):
         allcount=0
@@ -283,7 +297,14 @@ class ProcessData:
         of.close()
 
     def remove_by_std(self):
-        count=0
+        countSale=0
+        countRent = 0
+        ave=0
+        ave1 = 0
+        highest=0
+        highest1 = 0
+        biggest  = ''
+        biggest1 = ''
         for t_type in self.data:
             by_type=self.data[t_type]
             for province in by_type:
@@ -291,20 +312,23 @@ class ProcessData:
                 for county in by_province:
                     print(county)
                     by_county=by_province[county]
-                    for ward in by_county:
-                        # if ward=='':
-                        #     continue
-                        by_ward=by_county[ward]
-                        for house_type in by_ward:
-                            mean = self.calMean(by_ward[house_type])
-                            standard = self.calStd(by_ward[house_type], mean)
-                            if ward=='phuong 22':
-                                print("MEAN STANDARD {} {}".format(mean,standard))
-                            for item in by_ward[house_type]:
-                                if int(item.get("price")) < (mean - 3*standard) or int(item.get("price")) > (mean + 3*standard):
-                                    by_ward[house_type].remove(item)
-                                    count+=1
-        print("Remove by STD {}".format(count))
+                    for house_type in by_county:
+                        if (len(by_county[house_type])>0):
+                            mean = self.calMean(by_county[house_type])
+                            standard = self.calStd(by_county[house_type], mean)
+                            if t_type == 'cho thue':
+                                ave+=standard
+                                countRent+=1
+                                if standard > highest:
+                                    highest=standard
+                            elif t_type == 'can ban':
+                                ave1+=standard
+                                countSale+=1
+                                if standard > highest1:
+                                    highest1=standard
+                        
+        print("Rent Average standard deviation {}. Max {} ".format(ave/countRent,highest))
+        print("Sale Average standard deviation {}. Max {} ".format(ave1/countSale,highest1))
 
     def calMean(self,list):
         total = 0
@@ -315,6 +339,7 @@ class ProcessData:
 
             total += int(item.get("price"))
         return total / len(list)
+
 
     def calStd(self, list, mean):
         if len(list) == 1:
